@@ -7,6 +7,7 @@ Before I begin, those who helped me create this project shall be credited.
 - Ch40zz, for helping me fix many issues for things I could never have fixed.
 - IChooseYou, for his work with physical memory.
 - Heep042, for his work with physical memory and paging tables.
+- wlan, I used your drv_image class :) 
 
 # Physmeme
 
