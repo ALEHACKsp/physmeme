@@ -128,3 +128,20 @@ bool unmap_phys(
 	return unmap_phys_ptr ? unmap_phys_ptr(addr, size) : false;
 }
 ```
+
+# Other
+
+you can change the paremeters you pass to driver entry simply by changing this:
+
+```cpp
+using DRIVER_INITIALIZE = NTSTATUS(__stdcall*)(std::uintptr_t, std::size_t);
+```
+
+right now your entry point should look like this:
+
+```cpp
+NTSTATUS DriverEntry(PVOID lpBaseAddress, DWORD32 dwSize)
+```
+
+You can change this as you see fit.
+
