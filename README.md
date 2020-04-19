@@ -37,6 +37,8 @@ This then allows us the ability to install hooks, call the syscall, and then uni
 
 <img src="https://cdn.discordapp.com/attachments/687446832175251502/701355063939039292/unknown.png"/>
 
+This scanning takes under a second since each physical range is scanned with a seperate thread. To increase speeds i also map 2mb at a time and scan each page (512 pages).
+
 # How to use
 
 There are four functions that need to be altered to make this mapper work for you. I will cover each one by one.
