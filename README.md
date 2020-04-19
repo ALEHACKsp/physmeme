@@ -28,8 +28,7 @@ If you are in any sort of doubt about the abundance of these drivers simply go t
 
 ### How does this exploit work?
 
-Since we are able to read/write to any physical memory on the system the goal is to find the physical page of a syscall and map it into our system. This can be done by 
-calculating the offset into the page in which the syscall resides. Doing so is trival and only requires the modulus operation.
+Since we are able to read/write to any physical memory on the system the goal is to find the physical page of a syscall and map it into our system. This can be done by calculating the offset into the page in which the syscall resides. Doing so is trivial and only requires the modulus operation.
 
 ```cpp
 auto syscall_page_offet = rva % 0x1000;
