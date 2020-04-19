@@ -41,7 +41,7 @@ This then allows us the ability to install hooks, call the syscall, and then uni
 
 There are four functions that need to be altered to make this mapper work for you. I will cover each one by one.
 
-### load_drv
+### `HANDLE load_drv()`
 Load driver must take zero parameters and return a handle to the driver. Here is an example of this:
 
 ```cpp
@@ -64,7 +64,7 @@ HANDLE load_drv()
 
 note: my exploited driver actually came with a dll that exported all the functions.
 
-### unload_drv
+### `bool unload_drv()`
 Unload driver can and should return a bool but its not needed. There is also no need to pass any paremeters since the driver handle is global.
 
 ```cpp
@@ -80,7 +80,7 @@ bool unload_drv()
 }
 ```
 
-### map_phys
+### `std::uintptr_t map_phys(std::uintptr_t addr, std::size_t size)`
 
 This function will `MUST` take two parameters the first is the physical address to be mapped, the second is the size to be mapped. The return
 value is the virtual address of the mapping.
@@ -105,7 +105,7 @@ std::uintptr_t map_phys(
 }
 ```
 
-### unmap_phys
+### `bool unmap_phys(std::uintptr_t addr, std::size_t size)`
 
 This function must take the virtual address of the mapping (the address returned from map_phys) and the size that was mapped. If this function is unable to free the memory
 you will blue screen because you will run out of ram (happend a few times to me).
