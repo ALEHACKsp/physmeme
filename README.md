@@ -12,6 +12,12 @@ Before I begin, those who helped me create this project shall be credited.
 Given map/unmap (read/write) of physical memory, one can now systematically map unsigned code into ones kernel.
 Many drivers expose this primitive and now can all be exploited by simply coding a few functions.
 
+### What versions of windows does this mapper support?
+
+This mapper should work without any issues for pretty much all versions of relevant windows. Tested on windows 10 (1803-1909), but should support all the way back to vista.
+
+<img src="https://cdn.discordapp.com/attachments/693313068247285821/701219951733768232/unknown.png"/>
+
 ### What drivers support physical read/write?
 
 Any driver exposing MmMapIoSpace/MmUnmapIoSpace or ZwMapViewOfSection/ZwUnmapViewOfSection can be exploited. This means bios flashing utils, fan speed utils
