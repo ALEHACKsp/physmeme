@@ -18,7 +18,7 @@ Any driver exposing MmMapIoSpace/MmUnmapIoSpace or ZwMapViewOfSection/ZwUnmapVie
 (like MSI Afterburner), or general windows system utilities that expose physical read/write. 
 
 If you are in any sort of doubt about the abundance of these drivers simply go to 
-<a href="https://www.unknowncheats.me/forum/anti-cheat-bypass/334557-vulnerable-driver-megathread.html">this</a> page and ctrl-f "MmMapIoSpace".
+<a href="https://www.unknowncheats.me/forum/anti-cheat-bypass/334557-vulnerable-driver-megathread.html">this</a> page and ctrl-f "MmMapIoSpace". (24 results)
 
 ### How does this exploit work?
 
