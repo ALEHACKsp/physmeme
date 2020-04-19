@@ -143,5 +143,5 @@ right now your entry point should look like this:
 NTSTATUS DriverEntry(PVOID lpBaseAddress, DWORD32 dwSize)
 ```
 
-You can change this as you see fit. Note you need a custom entry point like all other driver mappers. :)
+You can change this as you see fit. Note you need a custom entry point like any other driver mapper requires.
 
