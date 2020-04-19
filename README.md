@@ -3,7 +3,7 @@
 Before I begin, those who helped me create this project shall be credited.
 
 - Can1357, for helping me find the correct page in physical memory.
-- buck, for teaching me everything about paging tables.
+- buck, for teaching me everything about paging tables. (although not used in this project)
 - Ch40zz, for helping me fix many issues in things I could never have fixed.
 - wlan, I used your drv_image class :)
 
