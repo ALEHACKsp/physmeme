@@ -13,7 +13,7 @@ Before I begin, those who helped me create this project shall be credited.
 Given map/unmap (read/write) of physical memory, one can now systematically map unsigned code into ones kernel.
 Many drivers expose this primitive and now can all be exploited by simply coding a few functions.
 
-## What drivers support physical read/write?
+### What drivers support physical read/write?
 
 Any driver exposing MmMapIoSpace/MmUnmapIoSpace or ZwMapViewOfSection/ZwUnmapViewOfSection can be exploited. This means bios flashing utils, fan speed utils
 (like MSI Afterburner), or general windows system utilities that expose physical read/write. 
