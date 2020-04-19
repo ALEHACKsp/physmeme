@@ -7,7 +7,7 @@ Before I begin, those who helped me create this project shall be credited.
 - Ch40zz, for helping me fix many issues for things I could never have fixed.
 - IChooseYou, for his work with physical memory.
 - Heep042, for his work with physical memory and paging tables.
-- wlan, I used your drv_image class :) 
+- wlan, I used your drv_image class :)
 
 # Physmeme
 
@@ -19,7 +19,7 @@ Many drivers expose this primitive and now can all be exploited by simply coding
 Any driver exposing MmMapIoSpace/MmUnmapIoSpace or ZwMapViewOfSection/ZwUnmapViewOfSection can be exploited. This means bios flashing utils, fan speed utils
 (like MSI Afterburner), or general windows system utilities that expose physical read/write. 
 
-Ff you are in any sort of doubt about the abundance of these drivers simply go to 
+If you are in any sort of doubt about the abundance of these drivers simply go to 
 <a href="https://www.unknowncheats.me/forum/anti-cheat-bypass/334557-vulnerable-driver-megathread.html">this</a> page and ctrl-f "MmMapIoSpace".
 
 ### How does this exploit work?
@@ -36,3 +36,6 @@ auto nt_syscall_offset = rva % 0x1000;
 
 This index, combined with the iteraction of each physical page and a comparison of bytes will result in us finding the physical page of a syscall (and its mapped into our process).
 This then allows us the ability to install hooks, call the syscall, and then uninstall the hook. The "hook" being `ExAllocatePool`, `ExAllocatePoolWithTag`, and `MmCopyMemory`.
+
+<img src="https://cdn.discordapp.com/attachments/687446832175251502/701355063939039292/unknown.png"/>
+
