@@ -21,7 +21,7 @@ Any driver exposing MmMapIoSpace/MmUnmapIoSpace or ZwMapViewOfSection/ZwUnmapVie
 Ff you are in any sort of doubt about the abundance of these drivers simply go to 
 <a href="https://www.unknowncheats.me/forum/anti-cheat-bypass/334557-vulnerable-driver-megathread.html">this</a> page and ctrl-f "MmMapIoSpace".
 
-## How does it work?
+### How does this exploit work?
 
 First lets start with a given, controlled writes can be leveraged to gain execution. I think people call this "write what where", but nevertheless if you
 know where you are writing you can leverage it to gain execution in places that might not have been accessable proir. Now that we have that agreed upon, lets get into the details of how this works.
