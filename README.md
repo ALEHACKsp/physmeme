@@ -10,7 +10,7 @@ Before I begin, those who helped me create this project shall be credited.
 # Physmeme
 
 Given map/unmap (read/write) of physical memory, one can now systematically map unsigned code into ones kernel.
-Many drivers expose this primitive and now can all be exploited by simply coding a few functions.
+Many drivers expose this primitive and now can all be exploited by simply coding a few functions. 
 
 ### What versions of windows does this mapper support?
 
@@ -48,7 +48,9 @@ This scanning takes under a second since each physical range is scanned with a s
 # How to use
 
 There are four functions that need to be altered to make this mapper work for you. I will cover each one by one. These functions are defined inside of a `physmeme.hpp` and need
-to stay inside of this file. This allows people to make different `physmeme.hpp` files for each driver they want to abuse. Modular code.
+to stay inside of this file. This allows people to make different `physmeme.hpp` files for each driver they want to abuse. Modular code. 
+
+When writing your driver you will need a custom entry point just like every other driver mapper.
 
 ### `HANDLE load_drv()`
 Load driver must take zero parameters and return a handle to the driver. Here is an example of this:
@@ -148,6 +150,3 @@ right now your entry point should look like this:
 ```cpp
 NTSTATUS DriverEntry(PVOID lpBaseAddress, DWORD32 dwSize)
 ```
-
-You can change this as you see fit. Note you need a custom entry point like any other driver mapper requires.
-
