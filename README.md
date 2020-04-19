@@ -4,9 +4,7 @@ Before I begin, those who helped me create this project shall be credited.
 
 - Can1357, for helping me find the correct page in physical memory.
 - buck, for teaching me everything about paging tables.
-- Ch40zz, for helping me fix many issues for things I could never have fixed.
-- IChooseYou, for his work with physical memory.
-- Heep042, for his work with physical memory and paging tables.
+- Ch40zz, for helping me fix many issues in things I could never have fixed.
 - wlan, I used your drv_image class :)
 
 # Physmeme
@@ -39,3 +37,91 @@ This then allows us the ability to install hooks, call the syscall, and then uni
 
 <img src="https://cdn.discordapp.com/attachments/687446832175251502/701355063939039292/unknown.png"/>
 
+# How to use
+
+There are four functions that need to be altered to make this mapper work for you. I will cover each one by one.
+
+### load_drv
+Load driver must take zero parameters and return a handle to the driver. Here is an example of this:
+
+```cpp
+/*
+	please code this function depending on your method of physical read/write.
+*/
+HANDLE load_drv()
+{
+	static const auto load_driver_ptr = 
+		reinterpret_cast<__int64(*)()>(
+			GetProcAddress(LoadLibrary("pmdll64.dll"), "LoadPhyMemDriver"));
+
+	if (load_driver_ptr)
+		load_driver_ptr();
+
+	//--- i dont ever use this handle, its just an example of what you should do.
+	return CreateFileA("\\\\.\\PhyMem", 0xC0000000, 3u, 0i64, 3u, 0x80u, 0i64);
+}
+```
+
+note: my exploited driver actually came with a dll that exported all the functions.
+
+### unload_drv
+Unload driver can and should return a bool but its not needed. There is also no need to pass any paremeters since the driver handle is global.
+
+```cpp
+/*
+	please code this function depending on your method of physical read/write.
+*/
+bool unload_drv()
+{
+	static const auto unload_driver_ptr = 
+		reinterpret_cast<__int64(*)()>(
+			GetProcAddress(LoadLibrary("pmdll64.dll"), "UnloadPhyMemDriver"));
+	return unload_driver_ptr ? unload_driver_ptr() : false;
+}
+```
+
+### map_phys
+
+This function will `MUST` take two parameters the first is the physical address to be mapped, the second is the size to be mapped. The return
+value is the virtual address of the mapping.
+
+```cpp
+/*
+	please code this function depending on your method of physical read/write.
+*/
+std::uintptr_t map_phys(
+	std::uintptr_t addr,
+	std::size_t size
+)
+{
+	//--- ensure the validity of the address we are going to try and map
+	if (!is_valid(addr))
+		return NULL;
+
+	static const auto map_phys_ptr = 
+		reinterpret_cast<__int64(__fastcall*)(__int64, unsigned)>(
+			GetProcAddress(LoadLibrary("pmdll64.dll"), "MapPhyMem"));
+	return map_phys_ptr ? map_phys_ptr(addr, size) : false;
+}
+```
+
+### unmap_phys
+
+This function must take the virtual address of the mapping (the address returned from map_phys) and the size that was mapped. If this function is unable to free the memory
+you will blue screen because you will run out of ram (happend a few times to me).
+
+```cpp
+/*
+	please code this function depending on your method of physical read/write.
+*/
+bool unmap_phys(
+	std::uintptr_t addr,
+	std::size_t size
+) 
+{
+	static const auto unmap_phys_ptr = 
+		reinterpret_cast<__int64(*)(__int64, unsigned)>(
+			GetProcAddress(LoadLibrary("pmdll64.dll"), "UnmapPhyMem"));
+	return unmap_phys_ptr ? unmap_phys_ptr(addr, size) : false;
+}
+```
