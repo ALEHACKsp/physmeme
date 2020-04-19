@@ -13,7 +13,7 @@ Before I begin, those who helped me create this project shall be credited.
 Given map/unmap (read/write) of physical memory, one can now systematically map unsigned code into ones kernel.
 Many drivers expose this primitive and now can all be exploited by simply coding a few functions.
 
-### What drivers support physical read/write?
+## What drivers support physical read/write?
 
 Any driver exposing MmMapIoSpace/MmUnmapIoSpace or ZwMapViewOfSection/ZwUnmapViewOfSection can be exploited. This means bios flashing utils, fan speed utils
 (like MSI Afterburner), or general windows system utilities that expose physical read/write. 
@@ -21,7 +21,7 @@ Any driver exposing MmMapIoSpace/MmUnmapIoSpace or ZwMapViewOfSection/ZwUnmapVie
 Ff you are in any sort of doubt about the abundance of these drivers simply go to 
 <a href="https://www.unknowncheats.me/forum/anti-cheat-bypass/334557-vulnerable-driver-megathread.html">this</a> page and ctrl-f "MmMapIoSpace".
 
-### How does it work?
+## How does it work?
 
 First lets start with a given, controlled writes can be leveraged to gain execution. I think people call this "write what where", but nevertheless if you
 know where you are writing you can leverage it to gain execution in places that might not have been accessable proir. Now that we have that agreed upon, lets get into the details of how this works.
