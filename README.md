@@ -41,7 +41,8 @@ This scanning takes under a second since each physical range is scanned with a s
 
 # How to use
 
-There are four functions that need to be altered to make this mapper work for you. I will cover each one by one.
+There are four functions that need to be altered to make this mapper work for you. I will cover each one by one. These functions are defined inside of a `physmeme.hpp` and need
+to stay inside of this file. This allows people to make different `physmeme.hpp` files for each driver they want to abuse. Modular code.
 
 ### `HANDLE load_drv()`
 Load driver must take zero parameters and return a handle to the driver. Here is an example of this:
