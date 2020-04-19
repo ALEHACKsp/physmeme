@@ -36,7 +36,7 @@ auto syscall_page_offet = rva % 0x1000;
 
 Now that we know that the syscalls bytes are going to be that far into the physical page we can map each physical page into our process 512 at a time (2mb) and then
 check the page + page_offset and compare with the syscalls bytes. After we have the syscalls page mapped into our process we can pretty much call any function inside
-of the kernel simply by installing an inline hook into that mapped page and then calling into the syscall. This is what kdmapper does.
+of the kernel simply by installing an inline hook into that mapped page and then calling into the syscall.
 
 <img src="https://cdn.discordapp.com/attachments/687446832175251502/701355063939039292/unknown.png"/>
 
