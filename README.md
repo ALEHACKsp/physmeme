@@ -9,7 +9,7 @@ Before I begin, those who helped me create this project shall be credited.
 
 # Physmeme
 
-Given map/unmap (read/write) of physical memory, one can now systematically map unsigned code into ones kernel.
+Given ANY map/unmap (read/write) of physical memory, one can now systematically map unsigned code into ones kernel.
 Many drivers expose this primitive and now can all be exploited by simply coding a few functions. 
 
 ### What versions of windows does this mapper support?
