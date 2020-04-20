@@ -40,6 +40,10 @@ of the kernel simply by installing an inline hook into that mapped page and then
 
 <img src="https://cdn.discordapp.com/attachments/687446832175251502/701355063939039292/unknown.png"/>
 
+### How long does it take to find the physical page?
+
+Less then one second. For each physical memory range I create a thread that maps 2mb at a time of physical memory and scans each physical page. This is on a systemw with 16gb.
+
 # How to use
 
 There are four functions that need to be altered to make this mapper work for you. I will cover each one by one. These functions are defined inside of a `physmeme.hpp` and need
