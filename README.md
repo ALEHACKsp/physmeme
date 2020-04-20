@@ -155,7 +155,6 @@ NTSTATUS DriverEntry(PVOID lpBaseAddress, DWORD32 dwSize)
 The source the hello-world.sys is the following:
 
 ```cpp
-
 #include <ntifs.h>
 
 NTSTATUS DriverEntry(PVOID lpBaseAddress, DWORD32 dwSize)
