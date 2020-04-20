@@ -42,7 +42,9 @@ of the kernel simply by installing an inline hook into that mapped page and then
 
 ### How long does it take to find the physical page?
 
-Less then one second. For each physical memory range I create a thread that maps 2mb at a time of physical memory and scans each physical page. This is on a systemw with 16gb.
+Less then one second. For each physical memory range I create a thread that maps 2mb at a time of physical memory and scans each physical page. This is on a system with 16gb.
+
+In other words... its very fast, you wont need to worry about waiting to find the correct page.
 
 # How to use
 
