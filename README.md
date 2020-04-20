@@ -3,13 +3,13 @@
 Before I begin, those who helped me create this project shall be credited.
 
 - Can1357, for helping me find the correct page in physical memory.
-- buck, for teaching me everything about paging tables.
+- buck, for teaching me everything about paging tables. (although not used in this project)
 - Ch40zz, for helping me fix many issues in things I could never have fixed.
 - wlan, I used your drv_image class :)
 
 # Physmeme
 
-Given map/unmap (read/write) of physical memory, one can now systematically map unsigned code into ones kernel.
+Given ANY map/unmap (read/write) of physical memory, one can now systematically map unsigned code into ones kernel.
 Many drivers expose this primitive and now can all be exploited by simply coding a few functions. 
 
 ### What versions of windows does this mapper support?
@@ -28,22 +28,23 @@ If you are in any sort of doubt about the abundance of these drivers simply go t
 
 ### How does this exploit work?
 
-First lets start with a given, controlled writes can be leveraged to gain execution. I think people call this "write what where", but nevertheless if you
-know where you are writing you can leverage it to gain execution in places that might not have been accessable proir. Now that we have that agreed upon, lets get into the details of how this works.
+Since we are able to read/write to any physical memory on the system the goal is to find the physical page of a syscall and map it into our process. This can be done by calculating the offset into the page in which the syscall resides. Doing so is trivial and only requires the modulus operation.
 
-To start, lets first understand that one page of memory reguardless of physical or virtual is typically 0x1000 bytes or 4096 bytes. Now, given a relative virtual address of a syscall
-(an address relative to the base of the module) we can modulus the address with the size of a page (0x1000) and get the index into the page. 
-
-```
-auto nt_syscall_offset = rva % 0x1000;
+```cpp
+auto syscall_page_offet = rva % 0x1000;
 ```
 
-This index, combined with the iteraction of each physical page and a comparison of bytes will result in us finding the physical page of a syscall (and its mapped into our process).
-This then allows us the ability to install hooks, call the syscall, and then uninstall the hook. The "hook" being `ExAllocatePool`, `ExAllocatePoolWithTag`, and `MmCopyMemory`.
+Now that we know that the syscalls bytes are going to be that far into the physical page we can map each physical page into our process 512 at a time (2mb) and then
+check the page + page_offset and compare with the syscalls bytes. After we have the syscalls page mapped into our process we can pretty much call any function inside
+of the kernel simply by installing an inline hook into that mapped page and then calling into the syscall.
 
 <img src="https://cdn.discordapp.com/attachments/687446832175251502/701355063939039292/unknown.png"/>
 
-This scanning takes under a second since each physical range is scanned with a seperate thread. To increase speeds i also map 2mb at a time and scan each page (512 pages).
+### How long does it take to find the physical page?
+
+Less then one second. For each physical memory range I create a thread that maps 2mb at a time of physical memory and scans each physical page. This is on a system with 16gb.
+
+In other words... its very fast, you wont need to worry about waiting to find the correct page.
 
 # How to use
 
