@@ -138,7 +138,7 @@ bool unmap_phys(
 }
 ```
 
-# Other
+# DriverEntry
 
 you can change the paremeters you pass to driver entry simply by changing this:
 
@@ -150,4 +150,18 @@ right now your entry point should look like this:
 
 ```cpp
 NTSTATUS DriverEntry(PVOID lpBaseAddress, DWORD32 dwSize)
+```
+
+The source the hello-world.sys is the following:
+
+```cpp
+
+#include <ntifs.h>
+
+NTSTATUS DriverEntry(PVOID lpBaseAddress, DWORD32 dwSize)
+{
+	DbgPrint("> Base Address: 0x%p, Size: 0x%x", lpBaseAddress, dwSize);
+	return STATUS_SUCCESS;
+}
+
 ```
