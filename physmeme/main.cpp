@@ -59,15 +59,27 @@ int __cdecl main(int argc, char** argv)
 	ctx.write_kernel(pool_base, image.data(), image.size());
 
 	//
-	// call driver entry and pass in base address and size of the driver.
+	// driver entry params
 	//
 	auto entry_point = pool_base + image.entry_point();
 	auto size = image.size();
 
+	//
+	// call driver entry
+	//
 	auto result = ctx.syscall<DRIVER_INITIALIZE>(reinterpret_cast<void*>(entry_point), pool_base, image.size());
 	std::cout << "[+] driver entry returned: " << std::hex << result << std::endl;
-	physmeme::unload_drv();
 
+	//
+	// zero header of driver
+	//
+	ctx.zero_kernel_memory(pool_base, image.header_size());
+	std::cout << "[+] zero'ed driver's pe header" << std::endl;
+
+	//
+	// close and unload vuln drivers
+	//
 	std::cout << "[=] press enter to close" << std::endl;
+	physmeme::unload_drv();
 	std::cin.get();
 }

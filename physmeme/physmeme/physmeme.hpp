@@ -21,7 +21,7 @@ namespace physmeme
 	// Author: Remy Lebeau
 	// taken from here: https://stackoverflow.com/questions/48485364/read-reg-resource-list-memory-values-incorrect-value
 	static const auto init_ranges = ([&]() -> bool
-		{
+	{
 			HKEY h_key;
 			DWORD type, size;
 			LPBYTE data;
@@ -39,7 +39,7 @@ namespace physmeme
 			delete[] data;
 			RegCloseKey(h_key);
 			return true;
-		})();
+	})();
 
 	/*
 		please code this function depending on your method of physical read/write.

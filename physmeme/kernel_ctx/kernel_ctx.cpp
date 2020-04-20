@@ -190,4 +190,24 @@ namespace physmeme
 				&amount_copied
 			);
 	}
+
+	/*
+		Author: xerox
+		Date: 4/19/2020
+
+		zero driver header
+	*/
+	void kernel_ctx::zero_kernel_memory(std::uintptr_t addr, std::size_t size)
+	{
+		static const auto rtl_zero_memory = 
+			util::get_module_export(
+				"ntoskrnl.exe",
+				"RtlZeroMemory"
+			);
+		syscall<decltype(&RtlSecureZeroMemory)>(
+			rtl_zero_memory, 
+			reinterpret_cast<void*>(addr),
+			size
+		);
+	}
 }

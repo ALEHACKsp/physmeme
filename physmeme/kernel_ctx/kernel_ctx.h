@@ -33,6 +33,8 @@ namespace physmeme
 		void read_kernel(std::uintptr_t addr, void* buffer, std::size_t size);
 		void write_kernel(std::uintptr_t addr, void* buffer, std::size_t size);
 
+		void zero_kernel_memory(std::uintptr_t addr, std::size_t size);
+
 		template <class T>
 		T read_kernel(std::uintptr_t addr)
 		{

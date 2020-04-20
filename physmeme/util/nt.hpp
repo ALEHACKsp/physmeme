@@ -89,5 +89,5 @@ typedef struct _MM_COPY_ADDRESS {
 
 using ExAllocatePool = PVOID(__stdcall*) (POOL_TYPE, SIZE_T);
 using ExAllocatePoolWithTag = PVOID(__stdcall*)(POOL_TYPE, SIZE_T, ULONG);
-using MmCopyMemory = NTSTATUS (__fastcall*)(PVOID, MM_COPY_ADDRESS,SIZE_T,ULONG,PSIZE_T);
+using MmCopyMemory = NTSTATUS (__stdcall*)(PVOID, MM_COPY_ADDRESS,SIZE_T,ULONG,PSIZE_T);
 using DRIVER_INITIALIZE = NTSTATUS(__stdcall*)(std::uintptr_t, std::size_t);
