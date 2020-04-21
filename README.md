@@ -94,7 +94,7 @@ bool unload_drv()
 
 ### `std::uintptr_t map_phys(std::uintptr_t addr, std::size_t size)`
 
-This function will `MUST` take two parameters the first is the physical address to be mapped, the second is the size to be mapped. The return
+This function MUST take two parameters the first is the physical address to be mapped, the second is the size to be mapped. The return
 value is the virtual address of the mapping.
 
 ```cpp
