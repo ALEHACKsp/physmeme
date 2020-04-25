@@ -1,4 +1,9 @@
-#include "map_driver.hpp"
+#include <windows.h>
+#include <iostream>
+#include <fstream>
+
+#include "kernel_ctx/kernel_ctx.h"
+#include "drv_image/drv_image.h"
 
 namespace physmeme
 {
@@ -31,6 +36,8 @@ namespace physmeme
 #if PHYSMEME_DEBUGGING true
 		std::cout << "[+] allocated " << std::hex << std::showbase << image.size() << " at: " << std::hex << std::showbase << pool_base << std::endl;
 #endif
+		if (!pool_base)
+			return false;
 
 		//
 		// fix the driver image
@@ -85,11 +92,13 @@ namespace physmeme
 #endif
 		physmeme::unload_drv();
 		std::cin.get();
+
+		return !result; // 0x0 means STATUS_SUCCESS
 	}
 
 	bool __cdecl map_driver(std::uint8_t * image, std::size_t size)
 	{
 		auto data = std::vector<std::uint8_t>(image, image + size);
-		map_driver(data);
+		return map_driver(data);
 	}
 }

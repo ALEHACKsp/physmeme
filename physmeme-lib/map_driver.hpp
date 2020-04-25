@@ -1,10 +1,5 @@
 #pragma once
-#include <windows.h>
-#include <iostream>
-#include <fstream>
-
-#include "kernel_ctx/kernel_ctx.h"
-#include "drv_image/drv_image.h"
+#include <vector>
 
 namespace physmeme
 {
