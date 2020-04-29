@@ -77,7 +77,7 @@ HANDLE load_drv()
 note: my exploited driver actually came with a dll that exported all the functions.
 
 ### `bool unload_drv()`
-Unload driver can and should return a bool but its not needed. There is also no need to pass any paremeters since the driver handle is global.
+Unload driver can and should return a bool but its not needed. There is also no need to pass any parameters since the driver handle is global.
 
 ```cpp
 /*
