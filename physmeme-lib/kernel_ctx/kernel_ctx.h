@@ -80,9 +80,9 @@ namespace physmeme
 		mutable std::atomic<void*> psyscall_func;
 
 		//
-		// you can edit this how you choose, im hooking NtTraceControl.
+		// you can edit this how you choose, im hooking NtShutdownSystem.
 		//
-		const std::pair<std::string_view, std::string_view> syscall_hook = { "NtTraceControl", "ntdll.dll" };
+		const std::pair<std::string_view, std::string_view> syscall_hook = { "NtShutdownSystem", "ntdll.dll" };
 
 		//
 		// offset of function into a physical page
