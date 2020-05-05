@@ -28,22 +28,14 @@ For more information, please refer to <http://unlicense.org>
 !!!!!!!!!!!!!!!!!!!!!!!!!!! This code was created by not-wlan (wlan). all credit for this header and source file goes to him !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 */
 
-#include "drv_image.h"
-
 #include <cassert>
 #include <fstream>
+#include "../drv_image/drv_image.h"
 
 namespace physmeme
 {
-	drv_image::drv_image(std::vector<std::uint8_t>& image)
-		: m_image(std::move(image))
+	drv_image::drv_image(std::vector<uint8_t> image) : m_image(std::move(image))
 	{
-		drv_image(image.data(), image.size());
-	}
-
-	drv_image::drv_image(std::uint8_t* image, std::size_t size) 
-	{
-		m_image = std::vector<std::uint8_t>(image, image + size);
 		m_dos_header = reinterpret_cast<PIMAGE_DOS_HEADER>(m_image.data());
 		assert(m_dos_header->e_magic == IMAGE_DOS_SIGNATURE);
 		m_nt_headers = reinterpret_cast<PIMAGE_NT_HEADERS64>((uintptr_t)m_dos_header + m_dos_header->e_lfanew);
@@ -74,9 +66,9 @@ namespace physmeme
 			const auto target = (uintptr_t)m_image_mapped.data() + section.VirtualAddress;
 			const auto source = (uintptr_t)m_dos_header + section.PointerToRawData;
 			std::copy_n(m_image.begin() + section.PointerToRawData, section.SizeOfRawData, m_image_mapped.begin() + section.VirtualAddress);
-#if PHYSMEME_DEBUGGING true
-			printf("copying [%s] 0x%p -> 0x%p [0x%04X]\n", &section.Name[0], (void*)source, (void*)target, section.SizeOfRawData);
-#endif
+
+			if constexpr(physmeme_debugging)
+				printf("[+] copying [%s] 0x%p -> 0x%p [0x%04X]\n", &section.Name[0], (void*)source, (void*)target, section.SizeOfRawData);
 		}
 	}
 
@@ -127,7 +119,7 @@ namespace physmeme
 	}
 
 
-	void drv_image::relocate(uintptr_t base) const
+	void drv_image::relocate(void* base) const
 	{
 		if (m_nt_headers->FileHeader.Characteristics & IMAGE_FILE_RELOCS_STRIPPED)
 			return;
@@ -135,7 +127,7 @@ namespace physmeme
 		ULONG total_count_bytes;
 		const auto nt_headers = ImageNtHeader((void*)m_image_mapped.data());
 		auto relocation_directory = (PIMAGE_BASE_RELOCATION)::ImageDirectoryEntryToData(nt_headers, TRUE, IMAGE_DIRECTORY_ENTRY_BASERELOC, &total_count_bytes);
-		auto image_base_delta = static_cast<uintptr_t>(static_cast<uintptr_t>(base) - (nt_headers->OptionalHeader.ImageBase));
+		auto image_base_delta = static_cast<uintptr_t>(reinterpret_cast<uintptr_t>(base) - (nt_headers->OptionalHeader.ImageBase));
 		auto relocation_size = total_count_bytes;
 
 		// This should check (DllCharacteristics & IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE) too but lots of drivers do not have it set due to WDK defaults
@@ -143,9 +135,8 @@ namespace physmeme
 
 		if (!doRelocations) 
 		{
-#if PHYSMEME_DEBUGGING true
-			printf("no relocations needed\n");
-#endif
+			if constexpr (physmeme_debugging)
+				printf("[+] no relocations needed\n");
 			return;
 		}
 
@@ -165,9 +156,8 @@ namespace physmeme
 			{
 				if (process_relocation(image_base_delta, *relocation_data, (uint8_t*)relocation_base) == FALSE)
 				{
-#if PHYSMEME_DEBUGGING true
-					printf("failed to relocate!");
-#endif
+					if constexpr (physmeme_debugging)
+						printf("[+] failed to relocate!");
 					return;
 				}
 			}
@@ -190,9 +180,8 @@ namespace physmeme
 
 		if (import_descriptors == nullptr) 
 		{
-#if PHYSMEME_DEBUGGING true
-			printf("no imports!\n");
-#endif
+			if constexpr (physmeme_debugging)
+				printf("[+] no imports!\n");
 			return;
 		}
 
@@ -203,9 +192,10 @@ namespace physmeme
 			const auto module_name = get_rva<char>(import_descriptors->Name);
 			const auto module_base = get_module(module_name);
 			assert(module_base != 0);
-#if PHYSMEME_DEBUGGING true
-			printf("processing module: %s [0x%I64X]\n", module_name, module_base);
-#endif
+
+			if constexpr (physmeme_debugging)
+				printf("[+] processing module: %s [0x%I64X]\n", module_name, module_base);
+
 			if (import_descriptors->OriginalFirstThunk)
 				image_thunk_data = get_rva<IMAGE_THUNK_DATA>(import_descriptors->OriginalFirstThunk);
 			else
@@ -222,9 +212,9 @@ namespace physmeme
 				const auto image_import_by_name = get_rva<IMAGE_IMPORT_BY_NAME>(*(DWORD*)image_thunk_data);
 				const auto name_of_import = static_cast<char*>(image_import_by_name->Name);
 				function_address = get_function(module_name, name_of_import);
-#if PHYSMEME_DEBUGGING true
-				printf("function: %s [0x%I64X]\n", name_of_import, function_address);
-#endif
+
+				if constexpr (physmeme_debugging)
+					printf("[+] function: %s [0x%I64X]\n", name_of_import, function_address);
 				assert(function_address != 0);
 				image_func_data->u1.Function = function_address;
 			}

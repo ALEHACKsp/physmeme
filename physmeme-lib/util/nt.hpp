@@ -3,16 +3,17 @@
 #include <winternl.h>
 #pragma comment(lib, "ntdll.lib")
 
-#define MM_COPY_MEMORY_PHYSICAL             0x1
-#define MM_COPY_MEMORY_VIRTUAL              0x2
-#define PHYSMEME_DEBUGGING 1
-
-constexpr auto PAGE_SIZE = 0x1000;
-constexpr auto STATUS_INFO_LENGTH_MISMATCH = 0xC0000004;
+constexpr bool physmeme_debugging = true;
+constexpr auto ntoskrnl_path = "C:\\Windows\\System32\\ntoskrnl.exe";
+constexpr auto page_size = 0x1000;
 
 constexpr auto SystemModuleInformation = 11;
 constexpr auto SystemHandleInformation = 16;
 constexpr auto SystemExtendedHandleInformation = 64;
+
+#define MM_COPY_MEMORY_PHYSICAL             0x1
+#define MM_COPY_MEMORY_VIRTUAL              0x2
+
 
 typedef struct _SYSTEM_HANDLE
 {

@@ -1,17 +1,54 @@
+#pragma once
 #include <Windows.h>
 #include <cstdint>
 #include <string_view>
 #include <iterator>
 #include <fstream>
 #include <string>
+#include <map>
 #include <vector>
+#include <ntstatus.h>
+#include <winternl.h>
+
 #include "nt.hpp"
 
-/*
-	This code stinks, its the worst code in this project and needs to be recoded in a later time.
-*/
 namespace util
 { 
+	//--- ranges of physical memory
+	static std::map<std::uintptr_t, std::size_t> pmem_ranges{};
+
+	//--- validates the address
+	static bool is_valid(std::uintptr_t addr)
+	{
+		for (auto range : pmem_ranges)
+			if (addr >= range.first && addr <= range.first + range.second)
+				return true;
+		return false;
+	}
+
+	// Author: Remy Lebeau
+	// taken from here: https://stackoverflow.com/questions/48485364/read-reg-resource-list-memory-values-incorrect-value
+	static const auto init_ranges = ([&]() -> bool
+	{
+			HKEY h_key;
+			DWORD type, size;
+			LPBYTE data;
+			RegOpenKeyEx(HKEY_LOCAL_MACHINE, "HARDWARE\\RESOURCEMAP\\System Resources\\Physical Memory", 0, KEY_READ, &h_key);
+			RegQueryValueEx(h_key, ".Translated", NULL, &type, NULL, &size); //get size
+			data = new BYTE[size];
+			RegQueryValueEx(h_key, ".Translated", NULL, &type, data, &size);
+			DWORD count = *(DWORD*)(data + 16);
+			auto pmi = data + 24;
+			for (int dwIndex = 0; dwIndex < count; dwIndex++)
+			{
+				pmem_ranges.emplace(*(uint64_t*)(pmi + 0), *(uint64_t*)(pmi + 8));
+				pmi += 20;
+			}
+			delete[] data;
+			RegCloseKey(h_key);
+			return true;
+	})();
+
 	// this was taken from wlan's drvmapper:
 	// https://github.com/not-wlan/drvmap/blob/98d93cc7b5ec17875f815a9cb94e6d137b4047ee/drvmap/util.cpp#L7
 	static void open_binary_file(const std::string& file, std::vector<uint8_t>& data)

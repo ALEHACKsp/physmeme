@@ -17,6 +17,23 @@ namespace physmeme
 		physmeme::kernel_ctx ctx;
 
 		//
+		// we dont need the driver loaded anymore
+		//
+		physmeme::unload_drv();
+
+		//
+		// allocate memory in the kernel for the driver
+		//
+		const auto pool_base = ctx.allocate_pool(image.size(), NonPagedPool);
+		printf("[+] allocated 0x%llx at 0x%p\n", image.size(), pool_base);
+
+		if (!pool_base)
+		{
+			printf("[!] allocation failed!\n");
+			return -1;
+		}
+
+		//
 		// lambdas used for fixing driver image
 		//
 		const auto _get_module = [&](std::string_view name)
@@ -30,69 +47,41 @@ namespace physmeme
 		};
 
 		//
-		// allocate memory in the kernel for the driver
-		//
-		std::uintptr_t pool_base = reinterpret_cast<std::uintptr_t>(ctx.allocate_pool(image.size(), NonPagedPool));
-#if PHYSMEME_DEBUGGING true
-		std::cout << "[+] allocated " << std::hex << std::showbase << image.size() << " at: " << std::hex << std::showbase << pool_base << std::endl;
-#endif
-		if (!pool_base)
-			return false;
-
-		//
 		// fix the driver image
 		//
 		image.fix_imports(_get_module, _get_export_name);
-#if PHYSMEME_DEBUGGING true
-		std::cout << "[+] fixed imports" << std::endl;
-#endif
+		printf("[+] fixed imports\n");
 
 		image.map();
-#if PHYSMEME_DEBUGGING true
-		std::cout << "[+] sections mapped in memory" << std::endl;
-#endif
+		printf("[+] sections mapped in memory\n");
+
 		image.relocate(pool_base);
-#if PHYSMEME_DEBUGGING true
-		std::cout << "[+] relocations fixed" << std::endl;
-#endif
+		printf("[+] relocations fixed\n");
 
 		//
 		// copy driver into the kernel
-		// this might blue screen if the image takes too long to copy
 		//
 		ctx.write_kernel(pool_base, image.data(), image.size());
 
 		//
-		// driver entry params
+		// driver entry
 		//
-		auto entry_point = pool_base + image.entry_point();
-		auto size = image.size();
+		auto entry_point = reinterpret_cast<std::uintptr_t>(pool_base) + image.entry_point();
 
 		//
 		// call driver entry
 		//
-		auto result = ctx.syscall<DRIVER_INITIALIZE>(reinterpret_cast<void*>(entry_point), pool_base, image.size());
-#if PHYSMEME_DEBUGGING true
-		std::cout << "[+] driver entry returned: " << std::hex << result << std::endl;
-#endif
+		auto result = ctx.syscall<DRIVER_INITIALIZE>(
+			reinterpret_cast<void*>(entry_point),
+			reinterpret_cast<std::uintptr_t>(pool_base),
+			image.size()
+			);
+		printf("[+] driver entry returned: 0x%p\n", result);
 
 		//
-		// zero header of driver
+		// zero driver headers
 		//
 		ctx.zero_kernel_memory(pool_base, image.header_size());
-#if PHYSMEME_DEBUGGING true
-		std::cout << "[+] zero'ed driver's pe header" << std::endl;
-#endif
-
-		//
-		// close and unload vuln drivers
-		//
-#if PHYSMEME_DEBUGGING true
-		std::cout << "[=] press enter to close" << std::endl;
-#endif
-		physmeme::unload_drv();
-		std::cin.get();
-
 		return !result; // 0x0 means STATUS_SUCCESS
 	}
 

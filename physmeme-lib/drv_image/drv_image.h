@@ -40,9 +40,7 @@ For more information, please refer to <http://unlicense.org>
 #include <functional>
 #include <DbgHelp.h>
 #include <variant>
-
-#define PHYSMEME_DEBUGGING 1
-
+#include "../util/nt.hpp"
 
 #pragma comment(lib, "Dbghelp.lib")
 namespace physmeme
@@ -56,13 +54,12 @@ namespace physmeme
 		PIMAGE_SECTION_HEADER m_section_header = nullptr;
 
 	public:
-		drv_image(std::uint8_t* image, std::size_t size);
-		drv_image(std::vector<std::uint8_t>& image);
+		explicit drv_image(std::vector<uint8_t> image);
 		size_t size() const;
 		uintptr_t entry_point() const;
 		void map();
 		static bool process_relocation(size_t image_base_delta, uint16_t data, uint8_t* relocation_base);
-		void relocate(uintptr_t base) const;
+		void relocate(void* base) const;
 
 		template<typename T>
 		__forceinline T* get_rva(const unsigned long offset)
@@ -70,7 +67,10 @@ namespace physmeme
 			return (T*)::ImageRvaToVa(m_nt_headers, m_image.data(), offset, nullptr);
 		}
 
-		void fix_imports(const std::function<uintptr_t(std::string_view)> get_module, const std::function<uintptr_t(const char*, const char*)> get_function);
+		void fix_imports(
+			const std::function<uintptr_t(std::string_view)> get_module, 
+			const std::function<uintptr_t(const char*, const char*)> get_function
+		);
 		void* data();
 		size_t header_size();
 	};

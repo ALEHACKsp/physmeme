@@ -1,5 +1,6 @@
 #pragma once
 #include <windows.h>
+#include <iostream>
 #include <string_view>
 #include <vector>
 #include <thread>
@@ -9,32 +10,69 @@
 #include "../physmeme/physmeme.hpp"
 #include "../util/hook.hpp"
 
-#if PHYSMEME_DEBUGGING
-#include <iostream>
-#endif
-
-/*
-	Author: xerox
-	Date: 4/19/2020
-
-	this namespace contains everything needed to interface with the kernel
-*/
 namespace physmeme
 {
+	//
+	// offset of function into a physical page
+	// used for comparing bytes when searching
+	//
+	inline std::uint16_t nt_page_offset{};
+
+	//
+	// rva of nt function we are going to hook
+	//
+	inline std::uint32_t nt_rva{};
+
+	//
+	// base address of ntoskrnl (inside of this process)
+	//
+	inline const std::uint8_t* ntoskrnl_buffer{};
+
+	//
+	// mapping of a syscalls physical memory (for installing hooks)
+	//
+	inline std::atomic<void*> psyscall_func{};
+
+	//
+	// you can edit this how you choose, im hooking NtShutdownSystem.
+	//
+	inline const std::pair<std::string_view, std::string_view> syscall_hook = { "NtShutdownSystem", "ntdll.dll" };
+
 	class kernel_ctx
 	{
 	public:
+		//
+		// default constructor
+		//
 		kernel_ctx();
+
+		//
+		// allocate kernel pool of desired size and type
+		//
 		void* allocate_pool(std::size_t size, POOL_TYPE pool_type = NonPagedPool);
+
+		//
+		// allocate kernel pool of size, pool tag, and type
+		//
 		void* allocate_pool(std::size_t size, ULONG pool_tag = 'MEME', POOL_TYPE pool_type = NonPagedPool);
 
-		void read_kernel(std::uintptr_t addr, void* buffer, std::size_t size);
-		void write_kernel(std::uintptr_t addr, void* buffer, std::size_t size);
+		//
+		// read kernel memory with RtlCopyMemory
+		//
+		void read_kernel(void* addr, void* buffer, std::size_t size);
 
-		void zero_kernel_memory(std::uintptr_t addr, std::size_t size);
+		//
+		// write kernel memory with RtlCopyMemory
+		//
+		void write_kernel(void* addr, void* buffer, std::size_t size);
+
+		//
+		// zero kernel memory using RtlZeroMemory 
+		//
+		void zero_kernel_memory(void* addr, std::size_t size);
 
 		template <class T>
-		T read_kernel(std::uintptr_t addr)
+		T read_kernel(void* addr)
 		{
 			if (!addr)
 				return  {};
@@ -44,7 +82,7 @@ namespace physmeme
 		}
 
 		template <class T>
-		void write_kernel(std::uintptr_t addr, const T& data)
+		void write_kernel(void* addr, const T& data)
 		{
 			if (!addr)
 				return {};
@@ -55,14 +93,19 @@ namespace physmeme
 		// use this to call any function in the kernel
 		//
 		template <class T, class ... Ts>
-		PVOID syscall(void* addr, Ts ... args)
+		std::invoke_result_t<T, Ts...> syscall(void* addr, Ts ... args)
 		{
-			auto proc = GetProcAddress(GetModuleHandleA("ntdll.dll"), syscall_hook.first.data());
+			static const auto proc = 
+				GetProcAddress(
+					GetModuleHandleA("ntdll.dll"),
+					syscall_hook.first.data()
+				);
+
 			if (!proc || !psyscall_func || !addr)
-				return reinterpret_cast<PVOID>(STATUS_INVALID_PARAMETER);
+				return {};
 
 			hook::make_hook(psyscall_func, addr);
-			PVOID result = reinterpret_cast<PVOID>(reinterpret_cast<T>(proc)(args ...));
+			auto result = reinterpret_cast<T>(proc)(args ...);
 			hook::remove(psyscall_func);
 			return result;
 		}
@@ -73,31 +116,5 @@ namespace physmeme
 		// find and map the physical page of a syscall into this process
 		//
 		void map_syscall(std::uintptr_t begin, std::uintptr_t end) const;
-
-		//
-		// mapping of a syscalls physical memory (for installing hooks)
-		//
-		mutable std::atomic<void*> psyscall_func;
-
-		//
-		// you can edit this how you choose, im hooking NtShutdownSystem.
-		//
-		const std::pair<std::string_view, std::string_view> syscall_hook = { "NtShutdownSystem", "ntdll.dll" };
-
-		//
-		// offset of function into a physical page
-		// used for comparing bytes when searching
-		//
-		std::uint16_t nt_page_offset;
-
-		//
-		// rva of nt function we are going to hook
-		//
-		std::uint32_t nt_rva;
-
-		//
-		// base address of ntoskrnl (inside of this process)
-		//
-		const std::uint8_t* ntoskrnl_buffer;
 	};
 }

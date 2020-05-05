@@ -40,6 +40,7 @@ For more information, please refer to <http://unlicense.org>
 #include <functional>
 #include <DbgHelp.h>
 #include <variant>
+#include "../util/nt.hpp"
 
 #pragma comment(lib, "Dbghelp.lib")
 namespace physmeme
@@ -58,7 +59,7 @@ namespace physmeme
 		uintptr_t entry_point() const;
 		void map();
 		static bool process_relocation(size_t image_base_delta, uint16_t data, uint8_t* relocation_base);
-		void relocate(uintptr_t base) const;
+		void relocate(void* base) const;
 
 		template<typename T>
 		__forceinline T* get_rva(const unsigned long offset)
@@ -66,7 +67,10 @@ namespace physmeme
 			return (T*)::ImageRvaToVa(m_nt_headers, m_image.data(), offset, nullptr);
 		}
 
-		void fix_imports(const std::function<uintptr_t(std::string_view)> get_module, const std::function<uintptr_t(const char*, const char*)> get_function);
+		void fix_imports(
+			const std::function<uintptr_t(std::string_view)> get_module, 
+			const std::function<uintptr_t(const char*, const char*)> get_function
+		);
 		void* data();
 		size_t header_size();
 	};

@@ -2,13 +2,11 @@
 
 namespace physmeme
 {
-	/*
-		Author: xerox
-		Date: 4/19/2020
-	*/
 	kernel_ctx::kernel_ctx()
-		: psyscall_func(NULL), ntoskrnl_buffer(NULL)
 	{
+		if (psyscall_func.load() || nt_page_offset || ntoskrnl_buffer)
+			return;
+
 		nt_rva = reinterpret_cast<std::uint32_t>(
 			util::get_module_export(
 				"ntoskrnl.exe",
@@ -16,16 +14,27 @@ namespace physmeme
 				true
 			));
 
-		nt_page_offset = nt_rva % 0x1000;
-		ntoskrnl_buffer = reinterpret_cast<std::uint8_t*>(LoadLibraryA("C:\\Windows\\System32\\ntoskrnl.exe"));
+		nt_page_offset = nt_rva % page_size;
+		ntoskrnl_buffer = reinterpret_cast<std::uint8_t*>(
+			LoadLibraryA(ntoskrnl_path)
+		);
 
-#if PHYSMEME_DEBUGGING
-		std::cout << "[+] page offset of " << syscall_hook.first << " is: " << std::hex << nt_page_offset << std::endl;
-#endif
+		if constexpr (physmeme_debugging)
+		{
+			printf("[+] page offset of %s is 0x%llx\n", syscall_hook.first.data(), nt_page_offset);
+			printf("[+] ntoskrnl_buffer: 0x%p\n", ntoskrnl_buffer);
+		}
+
+		if (!ntoskrnl_buffer || !nt_rva)
+		{
+			if constexpr (physmeme_debugging)
+				printf("[!] ntoskrnl_buffer was 0x%p, nt_rva was 0x%p\n", ntoskrnl_buffer, nt_rva);
+			return;
+		}
 
 		std::vector<std::thread> search_threads;
 		//--- for each physical memory range, make a thread to search it
-		for (auto ranges : pmem_ranges)
+		for (auto ranges : util::pmem_ranges)
 			search_threads.emplace_back(std::thread(
 				&kernel_ctx::map_syscall,
 				this,
@@ -36,17 +45,10 @@ namespace physmeme
 		for (std::thread& search_thread : search_threads)
 			search_thread.join();
 
-#if PHYSMEME_DEBUGGING
-		std::cout << "[+] psyscall_func: " << std::hex << std::showbase << psyscall_func.load() << std::endl;
-#endif
+		if constexpr (physmeme_debugging)
+			printf("[+] psyscall_func: 0x%p\n", psyscall_func.load());
 	}
 
-	/*
-		author: xerox
-		date: 4/18/2020
-
-		finds physical page of a syscall and map it into this process.
-	*/
 	void kernel_ctx::map_syscall(std::uintptr_t begin, std::uintptr_t end) const
 	{
 		//if the physical memory range is less then or equal to 2mb
@@ -57,7 +59,7 @@ namespace physmeme
 			{
 				// scan every page of the physical memory range
 				for (auto page = page_va; page < page_va + end; page += 0x1000)
-					if (!psyscall_func) // keep scanning until its found
+					if (!psyscall_func.load()) // keep scanning until its found
 						if (!memcmp(reinterpret_cast<void*>(page), ntoskrnl_buffer + nt_rva, 32))
 						{
 							psyscall_func.store((void*)page);
@@ -106,12 +108,6 @@ namespace physmeme
 		}
 	}
 
-	/*
-		Author: xerox
-		Date: 4/19/2020
-
-		allocate a pool in the kernel (no tag)
-	*/
 	void* kernel_ctx::allocate_pool(std::size_t size, POOL_TYPE pool_type)
 	{
 		static const auto ex_alloc_pool = 
@@ -119,17 +115,14 @@ namespace physmeme
 				"ntoskrnl.exe", 
 				"ExAllocatePool"
 			);
-		if (ex_alloc_pool)
-			return syscall<ExAllocatePool>(ex_alloc_pool, pool_type, size);
-		return NULL;
+
+		return syscall<ExAllocatePool>(
+			ex_alloc_pool, 
+			pool_type,
+			size
+		);
 	}
 
-	/*
-		Author: xerox
-		Date: 4/19/2020
-
-		allocate a pool in the kernel with a tag
-	*/
 	void* kernel_ctx::allocate_pool(std::size_t size, ULONG pool_tag, POOL_TYPE pool_type)
 	{
 		static const auto ex_alloc_pool_with_tag = 
@@ -137,76 +130,58 @@ namespace physmeme
 				"ntoskrnl.exe", 
 				"ExAllocatePoolWithTag"
 			);
-		if (ex_alloc_pool_with_tag)
-			return syscall<ExAllocatePoolWithTag>(ex_alloc_pool_with_tag, pool_type, size, pool_tag);
+
+		return syscall<ExAllocatePoolWithTag>(
+			ex_alloc_pool_with_tag,
+			pool_type,
+			size,
+			pool_tag
+		);
 	}
 
-	/*
-		Author: xerox
-		Date: 4/19/2020
-
-		read kernel memory
-	*/
-	void kernel_ctx::read_kernel(std::uintptr_t addr, void* buffer, std::size_t size)
+	void kernel_ctx::read_kernel(void* addr, void* buffer, std::size_t size)
 	{
-		size_t amount_copied;
 		static const auto mm_copy_memory = 
 			util::get_module_export(
 				"ntoskrnl.exe", 
-				"MmCopyMemory"
+				"RtlCopyMemory"
 			);
-		if (mm_copy_memory)
-			syscall<MmCopyMemory>(
-				mm_copy_memory, 
-				reinterpret_cast<void*>(buffer),
-				MM_COPY_ADDRESS{ (void*)addr },
-				size,
-				MM_COPY_MEMORY_VIRTUAL, 
-				&amount_copied
-			);
+
+		syscall<decltype(&memcpy)>(
+			mm_copy_memory,
+			buffer,
+			addr,
+			size
+		);
 	}
 
-	/*
-		Author: xerox
-		Date: 4/19/2020
-
-		write kernel memory, this doesnt write to read only memory!
-	*/
-	void kernel_ctx::write_kernel(std::uintptr_t addr, void* buffer, std::size_t size)
+	void kernel_ctx::write_kernel(void* addr, void* buffer, std::size_t size)
 	{
-		size_t amount_copied;
 		static const auto mm_copy_memory = 
 			util::get_module_export(
 				"ntoskrnl.exe",
-				"MmCopyMemory"
+				"RtlCopyMemory"
 			);
-		if (mm_copy_memory)
-			syscall<MmCopyMemory>(
-				mm_copy_memory, 
-				reinterpret_cast<void*>(addr),
-				MM_COPY_ADDRESS{ buffer },
-				size, 
-				MM_COPY_MEMORY_VIRTUAL,
-				&amount_copied
-			);
+
+		syscall<decltype(&memcpy)>(
+			mm_copy_memory,
+			addr,
+			buffer,
+			size
+		);
 	}
 
-	/*
-		Author: xerox
-		Date: 4/19/2020
-
-		zero driver header
-	*/
-	void kernel_ctx::zero_kernel_memory(std::uintptr_t addr, std::size_t size)
+	void kernel_ctx::zero_kernel_memory(void* addr, std::size_t size)
 	{
 		static const auto rtl_zero_memory = 
 			util::get_module_export(
 				"ntoskrnl.exe",
 				"RtlZeroMemory"
 			);
+
 		syscall<decltype(&RtlSecureZeroMemory)>(
 			rtl_zero_memory, 
-			reinterpret_cast<void*>(addr),
+			addr,
 			size
 		);
 	}
