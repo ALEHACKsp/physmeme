@@ -164,28 +164,3 @@ NTSTATUS DriverEntry(PVOID lpBaseAddress, DWORD32 dwSize)
 }
 
 ```
-
-# System Crash Probability
-
-I made a small test to see the average amount of times you could hook `NtTraceControl` and call into it before having another thread call into it at the same time or patch guard
-detecting you have patched code in ntoskrnl. Here are the results:
-
-- 6,004 calls
-- 2,194 calls
-- 6,897 calls
-- 679 calls
-- 17,159 calls
-- 4,140 calls
-
-`6004 + 2194 + 6897 +679 + 17159 + 4140 = 37073`
-`37073 / 6 = 6178.83333333`
-
-On average one in every 6,178 syscalls will another thread call into the function that is currently hooked. It takes three syscalls to map a driver if you are clearing the pe header.
-
-`6,178 / 3 = 2059`
-
-So on average one in every 2,059 drivers mapped you will crash once. 
-
-`2059 / 3 = 686`
-
-If you were to use physmeme to load your driver three times a day it would take on average 686 days to crash your system.
