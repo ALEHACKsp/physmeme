@@ -17,7 +17,7 @@ typedef struct _GIOMAP
 } GIOMAP;
 #pragma pack ( pop )
 
-constexpr char[] driver_name = "gdrv";
+constexpr char driver_name[] = "gdrv";
 const char* driver_path = (std::filesystem::current_path().string() + "\\driver\\gdrv.sys").c_str();
 
 namespace physmeme
