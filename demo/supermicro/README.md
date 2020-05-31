@@ -1,3 +1,7 @@
+# Warning
+
+This demo works on Windows 10-1909 and below, after 1909 physmeme.sys isnt supported view: [PFN_LIST_CORRUPT](https://githacks.org/xerox/physmeme/issues/2).
+
 # Demo
 
 simply open a console as admin, run "physmeme.exe hello-world.sys" and you should see a DbgPrint inside of dbgview. 
