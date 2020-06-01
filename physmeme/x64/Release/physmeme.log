@@ -1,8 +1,0 @@
-﻿  drv_image.cpp
-  kernel_ctx.cpp
-  main.cpp
-  Generating code
-  Compiler switch has changed, fall back to full compilation.
-  All 684 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
-  Finished generating code
-  physmeme.vcxproj -> C:\Users\interesting\Desktop\physmeme-master\x64\Release\physmeme.exe

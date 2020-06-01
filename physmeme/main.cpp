@@ -27,18 +27,6 @@ int __cdecl main(int argc, char** argv)
 	physmeme::unload_drv();
 
 	//
-	// allocate memory in the kernel for the driver
-	//
-	const auto pool_base = ctx.allocate_pool(image.size(), NonPagedPool);
-	printf("[+] allocated 0x%llx at 0x%p\n", image.size(), pool_base);
-
-	if (!pool_base)
-	{
-		printf("[!] allocation failed!\n");
-		return -1;
-	}
-
-	//
 	// lambdas used for fixing driver image
 	//
 	const auto _get_module = [&](std::string_view name)
@@ -59,6 +47,18 @@ int __cdecl main(int argc, char** argv)
 
 	image.map();
 	printf("[+] sections mapped in memory\n");
+
+	//
+	// allocate memory in the kernel for the driver
+	//
+	const auto pool_base = ctx.allocate_pool(image.size(), NonPagedPool);
+	printf("[+] allocated 0x%llx at 0x%p\n", image.size(), pool_base);
+
+	if (!pool_base)
+	{
+		printf("[!] allocation failed!\n");
+		return -1;
+	}
 
 	image.relocate(pool_base);
 	printf("[+] relocations fixed\n");

@@ -7,10 +7,6 @@
 
 namespace physmeme
 {
-	/*
-		Author: xerox
-		Date: 4/19/2020
-	*/
 	bool __cdecl map_driver(std::vector<std::uint8_t>& raw_driver)
 	{
 		physmeme::drv_image image(raw_driver);
@@ -20,18 +16,6 @@ namespace physmeme
 		// we dont need the driver loaded anymore
 		//
 		physmeme::unload_drv();
-
-		//
-		// allocate memory in the kernel for the driver
-		//
-		const auto pool_base = ctx.allocate_pool(image.size(), NonPagedPool);
-		printf("[+] allocated 0x%llx at 0x%p\n", image.size(), pool_base);
-
-		if (!pool_base)
-		{
-			printf("[!] allocation failed!\n");
-			return -1;
-		}
 
 		//
 		// lambdas used for fixing driver image
@@ -50,13 +34,21 @@ namespace physmeme
 		// fix the driver image
 		//
 		image.fix_imports(_get_module, _get_export_name);
-		printf("[+] fixed imports\n");
-
 		image.map();
-		printf("[+] sections mapped in memory\n");
+
+		//
+		// allocate memory in the kernel for the driver
+		//
+		const auto pool_base = 
+			ctx.allocate_pool(
+				image.size(),
+				NonPagedPool
+			);
+
+		if (!pool_base)
+			return -1;
 
 		image.relocate(pool_base);
-		printf("[+] relocations fixed\n");
 
 		//
 		// copy driver into the kernel
@@ -75,8 +67,7 @@ namespace physmeme
 			reinterpret_cast<void*>(entry_point),
 			reinterpret_cast<std::uintptr_t>(pool_base),
 			image.size()
-			);
-		printf("[+] driver entry returned: 0x%p\n", result);
+		);
 
 		//
 		// zero driver headers

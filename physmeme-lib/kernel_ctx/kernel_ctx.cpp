@@ -19,19 +19,6 @@ namespace physmeme
 			LoadLibraryA(ntoskrnl_path)
 		);
 
-		if constexpr (physmeme_debugging)
-		{
-			printf("[+] page offset of %s is 0x%llx\n", syscall_hook.first.data(), nt_page_offset);
-			printf("[+] ntoskrnl_buffer: 0x%p\n", ntoskrnl_buffer);
-		}
-
-		if (!ntoskrnl_buffer || !nt_rva)
-		{
-			if constexpr (physmeme_debugging)
-				printf("[!] ntoskrnl_buffer was 0x%p, nt_rva was 0x%p\n", ntoskrnl_buffer, nt_rva);
-			return;
-		}
-
 		std::vector<std::thread> search_threads;
 		//--- for each physical memory range, make a thread to search it
 		for (auto ranges : util::pmem_ranges)
@@ -44,9 +31,6 @@ namespace physmeme
 
 		for (std::thread& search_thread : search_threads)
 			search_thread.join();
-
-		if constexpr (physmeme_debugging)
-			printf("[+] psyscall_func: 0x%p\n", psyscall_func.load());
 	}
 
 	void kernel_ctx::map_syscall(std::uintptr_t begin, std::uintptr_t end) const

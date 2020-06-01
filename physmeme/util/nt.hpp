@@ -3,7 +3,6 @@
 #include <winternl.h>
 #pragma comment(lib, "ntdll.lib")
 
-constexpr bool physmeme_debugging = true;
 constexpr auto ntoskrnl_path = "C:\\Windows\\System32\\ntoskrnl.exe";
 constexpr auto page_size = 0x1000;
 
