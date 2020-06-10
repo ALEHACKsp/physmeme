@@ -164,8 +164,10 @@
   <ItemGroup>
     <ClInclude Include="drv_image\drv_image.h" />
     <ClInclude Include="kernel_ctx\kernel_ctx.h" />
+    <ClInclude Include="loadup.hpp" />
     <ClInclude Include="map_driver.hpp" />
     <ClInclude Include="physmeme\physmeme.hpp" />
+    <ClInclude Include="raw_driver.hpp" />
     <ClInclude Include="util\hook.hpp" />
     <ClInclude Include="util\nt.hpp" />
     <ClInclude Include="util\util.hpp" />

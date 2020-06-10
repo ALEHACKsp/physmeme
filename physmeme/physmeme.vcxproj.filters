@@ -58,5 +58,11 @@
     <ClInclude Include="physmeme\physmeme.hpp">
       <Filter>Header Files\physmeme</Filter>
     </ClInclude>
+    <ClInclude Include="loadup.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="raw_driver.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
