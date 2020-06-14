@@ -22,11 +22,6 @@ int __cdecl main(int argc, char** argv)
 	physmeme::kernel_ctx ctx;
 
 	//
-	// we dont need the driver loaded anymore
-	//
-	physmeme::unload_drv();
-
-	//
 	// lambdas used for fixing driver image
 	//
 	const auto _get_module = [&](std::string_view name)
@@ -87,6 +82,7 @@ int __cdecl main(int argc, char** argv)
 	// zero driver headers
 	//
 	ctx.zero_kernel_memory(pool_base, image.header_size());
+	physmeme::unload_drv();
 	printf("[=] press enter to close\n");
 	std::cin.get();
 }
