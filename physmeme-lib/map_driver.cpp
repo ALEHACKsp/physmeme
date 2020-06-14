@@ -13,11 +13,6 @@ namespace physmeme
 		physmeme::kernel_ctx ctx;
 
 		//
-		// we dont need the driver loaded anymore
-		//
-		physmeme::unload_drv();
-
-		//
 		// lambdas used for fixing driver image
 		//
 		const auto _get_module = [&](std::string_view name)
@@ -73,6 +68,8 @@ namespace physmeme
 		// zero driver headers
 		//
 		ctx.zero_kernel_memory(pool_base, image.header_size());
+		physmeme::unload_drv();
+		
 		return !result; // 0x0 means STATUS_SUCCESS
 	}
 
