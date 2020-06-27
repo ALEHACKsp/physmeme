@@ -10,7 +10,13 @@ namespace physmeme
 	bool __cdecl map_driver(std::vector<std::uint8_t>& raw_driver)
 	{
 		physmeme::drv_image image(raw_driver);
-		physmeme::load_drv();
+
+		//
+		// load exploitable driver
+		//
+		if (!physmeme::load_drv())
+			return false;
+
 		physmeme::kernel_ctx ctx;
 
 		//

@@ -74,7 +74,6 @@ namespace physmeme
 		DeviceIoControl(drv_handle, 0xC3502004, reinterpret_cast<LPVOID>(&in_buffer), sizeof(in_buffer),
 			reinterpret_cast<LPVOID>(out_buffer), sizeof(out_buffer), &returned, NULL);
 		return out_buffer[0];
-
 	}
 
 	//

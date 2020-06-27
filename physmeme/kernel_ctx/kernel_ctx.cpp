@@ -52,10 +52,20 @@ namespace physmeme
 			{
 				// scan every page of the physical memory range
 				for (auto page = page_va; page < page_va + end; page += 0x1000)
-					if (!psyscall_func.load()) // keep scanning until its found
+					if (!is_page_found.load()) // keep scanning until its found
 						if (!memcmp(reinterpret_cast<void*>(page), ntoskrnl_buffer + nt_rva, 32))
 						{
+							//
+							// this checks to ensure that the syscall does indeed work. if it doesnt, we keep looking!
+							//
 							psyscall_func.store((void*)page);
+							auto my_proc_base = reinterpret_cast<std::uintptr_t>(GetModuleHandleA(NULL));
+							auto my_proc_base_from_syscall = reinterpret_cast<std::uintptr_t>(get_proc_base(GetCurrentProcessId()));
+
+							if (my_proc_base != my_proc_base_from_syscall)
+								continue;
+
+							is_page_found.store(true);
 							return;
 						}
 				physmeme::unmap_phys(page_va, end);
@@ -74,10 +84,23 @@ namespace physmeme
 					// loop every page of 2mbs (512)
 					for (auto page = page_va; page < page_va + 0x1000 * 512; page += 0x1000)
 					{
-						if (!memcmp(reinterpret_cast<void*>(page), ntoskrnl_buffer + nt_rva, 32))
+						if (!is_page_found.load())
 						{
-							psyscall_func.store((void*)page);
-							return;
+							if (!memcmp(reinterpret_cast<void*>(page), ntoskrnl_buffer + nt_rva, 32))
+							{
+								//
+								// this checks to ensure that the syscall does indeed work. if it doesnt, we keep looking!
+								//
+								psyscall_func.store((void*)page);
+								auto my_proc_base = reinterpret_cast<std::uintptr_t>(GetModuleHandle(NULL));
+								auto my_proc_base_from_syscall = reinterpret_cast<std::uintptr_t>(get_proc_base(GetCurrentProcessId()));
+
+								if (my_proc_base != my_proc_base_from_syscall)
+									continue;
+
+								is_page_found.store(true);
+								return;
+							}
 						}
 					}
 					physmeme::unmap_phys(page_va, 0x1000 * 512);
@@ -90,10 +113,23 @@ namespace physmeme
 			{
 				for (auto page = page_va; page < page_va + remainder; page += 0x1000)
 				{
-					if (!memcmp(reinterpret_cast<void*>(page), ntoskrnl_buffer + nt_rva, 32))
+					if (!is_page_found.load())
 					{
-						psyscall_func.store((void*)page);
-						return;
+						if (!memcmp(reinterpret_cast<void*>(page), ntoskrnl_buffer + nt_rva, 32))
+						{
+							//
+							// this checks to ensure that the syscall does indeed work. if it doesnt, we keep looking!
+							//
+							psyscall_func.store((void*)page);
+							auto my_proc_base = reinterpret_cast<std::uintptr_t>(GetModuleHandle(NULL));
+							auto my_proc_base_from_syscall = reinterpret_cast<std::uintptr_t>(get_proc_base(GetCurrentProcessId()));
+
+							if (my_proc_base != my_proc_base_from_syscall)
+								continue;
+
+							is_page_found.store(true);
+							return;
+						}
 					}
 				}
 				physmeme::unmap_phys(page_va, remainder);
@@ -272,6 +308,48 @@ namespace physmeme
 			rtl_zero_memory, 
 			addr,
 			size
+		);
+	}
+
+	PEPROCESS kernel_ctx::get_peprocess(unsigned pid) const
+	{
+		if (!pid)
+			return {};
+
+		PEPROCESS proc;
+		static auto get_peprocess_from_pid =
+			util::get_kernel_export(
+				"ntoskrnl.exe",
+				"PsLookupProcessByProcessId"
+			);
+
+		syscall<PsLookupProcessByProcessId>(
+			get_peprocess_from_pid,
+			(HANDLE)pid,
+			&proc
+		);
+		return proc;
+	}
+
+	void* kernel_ctx::get_proc_base(unsigned pid) const
+	{
+		if (!pid)
+			return  {};
+
+		const auto peproc = get_peprocess(pid);
+
+		if (!peproc)
+			return {};
+
+		static auto get_section_base = 
+			util::get_kernel_export(
+				"ntoskrnl.exe",
+				"PsGetProcessSectionBaseAddress"
+			);
+
+		return syscall<PsGetProcessSectionBaseAddress>(
+			get_section_base,
+			peproc
 		);
 	}
 }

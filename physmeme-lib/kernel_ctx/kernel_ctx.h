@@ -29,6 +29,11 @@ namespace physmeme
 	inline const std::uint8_t* ntoskrnl_buffer{};
 
 	//
+	// has the page been found yet?
+	//
+	inline std::atomic<bool> is_page_found = false;
+
+	//
 	// mapping of a syscalls physical memory (for installing hooks)
 	//
 	inline std::atomic<void*> psyscall_func{};
@@ -95,7 +100,7 @@ namespace physmeme
 		}
 
 		template <class T, class ... Ts>
-		std::invoke_result_t<T, Ts...> syscall(void* addr, Ts ... args)
+		std::invoke_result_t<T, Ts...> syscall(void* addr, Ts ... args) const
 		{
 			static const auto proc = 
 				GetProcAddress(
@@ -114,5 +119,15 @@ namespace physmeme
 		// find and map the physical page of a syscall into this process
 		//
 		void map_syscall(std::uintptr_t begin, std::uintptr_t end) const;
+
+		//
+		// used in conjunction with get_process_base.
+		//
+		PEPROCESS get_peprocess(unsigned pid) const;
+
+		//
+		// get base address of process (used to compare and ensure we find the right page).
+		//
+		void* get_proc_base(unsigned pid) const;
 	};
 }
