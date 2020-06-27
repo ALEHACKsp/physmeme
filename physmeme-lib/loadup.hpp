@@ -232,7 +232,7 @@ namespace driver
 		};
 
 		const auto service_name = random_file_name(16);
-		const auto file_path = std::filesystem::temp_directory_path().string() + random_file_name(16);
+		const auto file_path = std::filesystem::temp_directory_path().string() + service_name;
 		std::ofstream output_file(file_path.c_str(), std::ios::binary);
 
 		output_file.write((char*)drv_buffer.data(), drv_buffer.size());
@@ -267,11 +267,10 @@ namespace driver
 			RtlAnsiStringToUnicodeString(&driver_reg_path_unicode, &driver_rep_path_cstr, true);
 
 			const bool unload_drv = !reinterpret_cast<nt_unload_driver_t>(lp_nt_unload_drv)(&driver_reg_path_unicode);
-			const auto image_path = util::get_service_image_path(service_name);
-			const bool delete_drv = std::filesystem::remove(image_path);
+			const auto image_path = std::filesystem::temp_directory_path().string() + service_name;
 			const bool delete_reg = util::delete_service_entry(service_name);
-
-			return unload_drv && delete_drv && delete_reg;
+			const bool delete_drv = std::filesystem::remove(image_path);
+			return unload_drv && delete_reg && delete_drv;
 		}
 		return false;
 	}

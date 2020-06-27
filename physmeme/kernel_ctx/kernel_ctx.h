@@ -36,7 +36,7 @@ namespace physmeme
 	//
 	// you can edit this how you choose, im hooking NtShutdownSystem.
 	//
-	inline const std::pair<std::string_view, std::string_view> syscall_hook = { "NtShutdownSystem", "ntdll.dll" };
+	inline const std::pair<std::string_view, std::string_view> syscall_hook = { "NtAddAtom", "ntdll.dll" };
 
 	class kernel_ctx
 	{
@@ -67,17 +67,22 @@ namespace physmeme
 		void write_kernel(void* addr, void* buffer, std::size_t size);
 
 		//
-		// zero kernel memory using RtlZeroMemory 
+		// zero kernel memory using RtlZeroMemory
 		//
 		void zero_kernel_memory(void* addr, std::size_t size);
+
+		//
+		// clear piddb cache of a specific driver
+		//
+		bool clear_piddb_cache(const std::string& file_name, const std::uint32_t timestamp);
 
 		template <class T>
 		T read_kernel(void* addr)
 		{
 			if (!addr)
-				return  {};
+				return {};
 			T buffer;
-			read_kernel(addr, &buffer, sizeof(T));
+			read_kernel(addr, (void*)&buffer, sizeof(T));
 			return buffer;
 		}
 
@@ -85,13 +90,10 @@ namespace physmeme
 		void write_kernel(void* addr, const T& data)
 		{
 			if (!addr)
-				return {};
-			write_kernel(addr, &data, sizeof(T));
+				return;
+			write_kernel(addr, (void*)&data, sizeof(T));
 		}
 
-		//
-		// use this to call any function in the kernel
-		//
 		template <class T, class ... Ts>
 		std::invoke_result_t<T, Ts...> syscall(void* addr, Ts ... args)
 		{
@@ -101,15 +103,11 @@ namespace physmeme
 					syscall_hook.first.data()
 				);
 
-			if (!proc || !psyscall_func || !addr)
-				return {};
-
 			hook::make_hook(psyscall_func, addr);
 			auto result = reinterpret_cast<T>(proc)(args ...);
 			hook::remove(psyscall_func);
 			return result;
 		}
-
 	private:
 
 		//

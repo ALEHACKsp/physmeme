@@ -10,7 +10,21 @@ namespace physmeme
 	bool __cdecl map_driver(std::vector<std::uint8_t>& raw_driver)
 	{
 		physmeme::drv_image image(raw_driver);
+		physmeme::load_drv();
 		physmeme::kernel_ctx ctx;
+
+		//
+		// unload exploitable driver
+		//
+		if (!physmeme::unload_drv())
+			return false;
+
+		//
+		// shoot the tires off the cache.
+		//
+		const auto drv_timestamp = util::get_file_header(raw_driver.data())->TimeDateStamp;
+		if (!ctx.clear_piddb_cache(physmeme::drv_key, drv_timestamp))
+			return false;
 
 		//
 		// lambdas used for fixing driver image
@@ -22,7 +36,7 @@ namespace physmeme
 
 		const auto _get_export_name = [&](const char* base, const char* name)
 		{
-			return reinterpret_cast<std::uintptr_t>(util::get_module_export(base, name));
+			return reinterpret_cast<std::uintptr_t>(util::get_kernel_export(base, name));
 		};
 
 		//
@@ -68,8 +82,6 @@ namespace physmeme
 		// zero driver headers
 		//
 		ctx.zero_kernel_memory(pool_base, image.header_size());
-		physmeme::unload_drv();
-		
 		return !result; // 0x0 means STATUS_SUCCESS
 	}
 

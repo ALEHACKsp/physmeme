@@ -1,10 +1,15 @@
 #pragma once
 #include <Windows.h>
 #include <winternl.h>
-#pragma comment(lib, "ntdll.lib")
 
-constexpr auto ntoskrnl_path = "C:\\Windows\\System32\\ntoskrnl.exe";
+#pragma comment(lib, "ntdll.lib")
 constexpr auto page_size = 0x1000;
+
+inline const char piddb_lock_sig[] = "\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x4C\x8B\x8C\x24";
+inline const char piddb_lock_mask[] = "xxx????x????xxxx";
+
+inline const char piddb_table_sig[] = "\x48\x8D\x0D\x00\x00\x00\x00\xE8\x00\x00\x00\x00\x48\x8D\x1D\x00\x00\x00\x00\x48\x85\xC0\x0F";
+inline const char piddb_table_mask[] = "xxx????x????xxx????xxxx";
 
 constexpr auto SystemModuleInformation = 11;
 constexpr auto SystemHandleInformation = 16;
@@ -13,6 +18,14 @@ constexpr auto SystemExtendedHandleInformation = 64;
 #define MM_COPY_MEMORY_PHYSICAL             0x1
 #define MM_COPY_MEMORY_VIRTUAL              0x2
 
+typedef struct PiDDBCacheEntry
+{
+	LIST_ENTRY		list;
+	UNICODE_STRING	driver_name;
+	ULONG			time_stamp;
+	NTSTATUS		load_status;
+	char			_0x0028[16]; // data from the shim engine, or uninitialized memory for custom drivers
+}PIDCacheobj;
 
 typedef struct _SYSTEM_HANDLE
 {
@@ -92,3 +105,7 @@ using ExAllocatePool = PVOID(__stdcall*) (POOL_TYPE, SIZE_T);
 using ExAllocatePoolWithTag = PVOID(__stdcall*)(POOL_TYPE, SIZE_T, ULONG);
 using MmCopyMemory = NTSTATUS (__stdcall*)(PVOID, MM_COPY_ADDRESS,SIZE_T,ULONG,PSIZE_T);
 using DRIVER_INITIALIZE = NTSTATUS(__stdcall*)(std::uintptr_t, std::size_t);
+using ExAcquireResourceExclusiveLite = BOOLEAN(__stdcall*)(void*,bool);
+using RtlLookupElementGenericTableAvl = PIDCacheobj* (__stdcall*) (void*, void*);
+using RtlDeleteElementGenericTableAvl = bool(__stdcall*)(void*,void*);
+using ExReleaseResourceLite = bool(__stdcall*)(void*);

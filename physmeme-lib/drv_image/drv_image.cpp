@@ -62,6 +62,7 @@ namespace physmeme
 			const auto target = (uintptr_t)m_image_mapped.data() + section.VirtualAddress;
 			const auto source = (uintptr_t)m_dos_header + section.PointerToRawData;
 			std::copy_n(m_image.begin() + section.PointerToRawData, section.SizeOfRawData, m_image_mapped.begin() + section.VirtualAddress);
+			printf("[+] copying [%s] 0x%p -> 0x%p [0x%04X]\n", &section.Name[0], (void*)source, (void*)target, section.SizeOfRawData);
 		}
 	}
 
@@ -127,7 +128,10 @@ namespace physmeme
 		const bool doRelocations = image_base_delta != 0 && relocation_size > 0;
 
 		if (!doRelocations) 
+		{
+			printf("[+] no relocations needed\n");
 			return;
+		}
 
 		void* relocation_end = reinterpret_cast<uint8_t*>(relocation_directory) + relocation_size;
 
@@ -140,8 +144,13 @@ namespace physmeme
 			auto relocation_data = reinterpret_cast<PWORD>(relocation_directory + 1);
 
 			for (unsigned long i = 0; i < num_relocs; ++i, ++relocation_data)
+			{
 				if (process_relocation(image_base_delta, *relocation_data, (uint8_t*)relocation_base) == FALSE)
+				{
+					printf("[+] failed to relocate!");
 					return;
+				}
+			}
 
 			relocation_directory = reinterpret_cast<PIMAGE_BASE_RELOCATION>(relocation_data);
 		}
@@ -160,7 +169,10 @@ namespace physmeme
 		auto import_descriptors = static_cast<PIMAGE_IMPORT_DESCRIPTOR>(::ImageDirectoryEntryToData(m_image.data(), FALSE, IMAGE_DIRECTORY_ENTRY_IMPORT, &size));
 
 		if (import_descriptors == nullptr) 
+		{
+			printf("[+] no imports!\n");
 			return;
+		}
 
 		for (; import_descriptors->Name; import_descriptors++)
 		{
@@ -168,12 +180,14 @@ namespace physmeme
 
 			const auto module_name = get_rva<char>(import_descriptors->Name);
 			const auto module_base = get_module(module_name);
+			printf("[+] processing module: %s [0x%I64X]\n", module_name, module_base);
 
 			if (import_descriptors->OriginalFirstThunk)
 				image_thunk_data = get_rva<IMAGE_THUNK_DATA>(import_descriptors->OriginalFirstThunk);
 			else
 				image_thunk_data = get_rva<IMAGE_THUNK_DATA>(import_descriptors->FirstThunk);
 			auto image_func_data = get_rva<IMAGE_THUNK_DATA64>(import_descriptors->FirstThunk);
+;
 
 			for (; image_thunk_data->u1.AddressOfData; image_thunk_data++, image_func_data++)
 			{
@@ -182,6 +196,8 @@ namespace physmeme
 				const auto image_import_by_name = get_rva<IMAGE_IMPORT_BY_NAME>(*(DWORD*)image_thunk_data);
 				const auto name_of_import = static_cast<char*>(image_import_by_name->Name);
 				function_address = get_function(module_name, name_of_import);
+
+				printf("[+] function: %s [0x%I64X]\n", name_of_import, function_address);
 				image_func_data->u1.Function = function_address;
 			}
 		}
