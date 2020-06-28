@@ -36,20 +36,16 @@ int __cdecl main(int argc, char** argv)
 	//
 	// shoot the tires off piddb cache entry.
 	//
-	//const auto drv_timestamp = util::get_file_header((void*)raw_driver)->TimeDateStamp;
-	//printf("[+] clearing piddb cache for driver: %s, with timestamp 0x%x\n", physmeme::drv_key.c_str(), drv_timestamp);
+	const auto drv_timestamp = util::get_file_header((void*)raw_driver)->TimeDateStamp;
+	printf("[+] clearing piddb cache for driver: %s, with timestamp 0x%x\n", physmeme::drv_key.c_str(), drv_timestamp);
 
-    //
-    // uncomment at your own risk!
-    //
-    
-	//if (!ctx.clear_piddb_cache(physmeme::drv_key, drv_timestamp))
-	//{
+	if (!ctx.clear_piddb_cache(physmeme::drv_key, drv_timestamp))
+	{
 		// this is because the signature might be broken on these versions of windows.
-		//perror("[-] failed to clear PiDDBCacheTable.\n");
-		//return -1;
-	//}
-	//printf("[+] cleared piddb cache...\n");
+		perror("[-] failed to clear PiDDBCacheTable.\n");
+		return -1;
+	}
+	printf("[+] cleared piddb cache...\n");
 
 	//
 	// lambdas used for fixing driver image
