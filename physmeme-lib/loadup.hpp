@@ -269,8 +269,12 @@ namespace driver
 			const bool unload_drv = !reinterpret_cast<nt_unload_driver_t>(lp_nt_unload_drv)(&driver_reg_path_unicode);
 			const auto image_path = std::filesystem::temp_directory_path().string() + service_name;
 			const bool delete_reg = util::delete_service_entry(service_name);
-			const bool delete_drv = std::filesystem::remove(image_path);
-			return unload_drv && delete_reg && delete_drv;
+			
+			try
+			{
+			    const bool delete_drv = std::filesystem::remove(image_path);
+			}catch (std::exception& e) {}
+			return unload_drv && delete_reg;
 		}
 		return false;
 	}
