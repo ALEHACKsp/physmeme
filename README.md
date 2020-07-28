@@ -12,6 +12,10 @@ Before I begin, those who helped me create this project shall be credited.
 Given ANY map/unmap (read/write) of physical memory, one can now systematically map unsigned code into ones kernel.
 Many drivers expose this primitive and now can all be exploited by simply coding a few functions. 
 
+# WARNING
+
+All anti virus softwares must be disabled/uninstalled avast specically... they hook the system service dispatch table with their HV and prevent physmeme from working...
+
 ### What versions of windows does this mapper support?
 
 This mapper should work without any issues for pretty much all versions of relevant windows. Tested on windows 10 (1803-1909), but should support all the way back to vista.
