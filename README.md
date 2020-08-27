@@ -3,7 +3,6 @@
 Before I begin, those who helped me create this project shall be credited.
 
 - [Can1357](https://blog.can.ac), for helping me find the correct page in physical memory.
-- buck, for teaching me everything about paging tables. (although not used in this project)
 - Ch40zz, for helping me fix many issues in things I could never have fixed.
 - wlan, I used your drv_image class :)
 
@@ -19,8 +18,6 @@ All anti virus softwares must be disabled/uninstalled avast specically... they h
 ### What versions of windows does this mapper support?
 
 This mapper should work without any issues for pretty much all versions of relevant windows. Tested on windows 10 (1803-1909), but should support all the way back to vista.
-
-<img src="https://cdn.discordapp.com/attachments/693313068247285821/701219951733768232/unknown.png"/>
 
 ### What drivers support physical read/write?
 
