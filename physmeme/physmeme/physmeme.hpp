@@ -71,7 +71,7 @@ namespace physmeme
 	)
 	{
 		//--- ensure the validity of the address we are going to try and map
-		if (!util::is_valid(addr))
+		if (!util::is_phys_addr_valid(addr))
 			return NULL;
 
 		GIOMAP in_buffer = { 0, 0, addr, 0, size };

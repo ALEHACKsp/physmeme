@@ -21,7 +21,7 @@ namespace util
 	static std::map<std::uintptr_t, std::size_t> pmem_ranges{};
 
 	//--- validates the address
-	static bool is_valid(std::uintptr_t addr)
+	inline bool is_phys_addr_valid(std::uintptr_t addr)
 	{
 		for (auto range : pmem_ranges)
 			if (addr >= range.first && addr <= range.first + range.second)
@@ -82,8 +82,6 @@ namespace util
 		data.insert(data.begin(), std::istream_iterator<uint8_t>(fstr), std::istream_iterator<uint8_t>());
 	}
 
-	// get base address of kernel module
-	//
 	// taken from: https://github.com/z175/kdmapper/blob/master/kdmapper/utils.cpp#L30
 	static std::uintptr_t get_module_base(const char* module_name)
 	{
@@ -121,8 +119,6 @@ namespace util
 		return NULL;
 	}
 
-	// get base address of kernel module
-	//
 	// taken from: https://github.com/z175/kdmapper/blob/master/kdmapper/utils.cpp#L30
 	static void* get_kernel_export(const char* module_name, const char* export_name, bool rva = false)
 	{

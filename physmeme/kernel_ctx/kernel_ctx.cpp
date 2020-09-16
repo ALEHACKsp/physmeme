@@ -10,22 +10,17 @@ namespace physmeme
 		nt_rva = reinterpret_cast<std::uint32_t>(
 			util::get_kernel_export(
 				"ntoskrnl.exe",
-				syscall_hook.first.data(),
+				syscall_hook.first,
 				true
 			));
 
 		nt_page_offset = nt_rva % page_size;
 		ntoskrnl_buffer = reinterpret_cast<std::uint8_t*>(
-			LoadLibraryEx("ntoskrnl.exe", NULL, DONT_RESOLVE_DLL_REFERENCES)
-		);
-
-		printf("[+] page offset of %s is 0x%llx\n", syscall_hook.first.data(), nt_page_offset);
-		printf("[+] ntoskrnl_buffer: 0x%p\n", ntoskrnl_buffer);
-		printf("[+] ntoskrnl_buffer was 0x%p, nt_rva was 0x%p\n", ntoskrnl_buffer, nt_rva);
-
-		std::vector<std::thread> search_threads;
+			LoadLibraryEx("ntoskrnl.exe", NULL, 
+				DONT_RESOLVE_DLL_REFERENCES));
 
 		//--- for each physical memory range, make a thread to search it
+		std::vector<std::thread> search_threads;
 		for (auto ranges : util::pmem_ranges)
 			search_threads.emplace_back(std::thread(
 				&kernel_ctx::map_syscall,
@@ -36,14 +31,10 @@ namespace physmeme
 
 		for (std::thread& search_thread : search_threads)
 			search_thread.join();
-
-		printf("[+] psyscall_func: 0x%p\n", psyscall_func.load());
 	}
 
 	void kernel_ctx::map_syscall(std::uintptr_t begin, std::uintptr_t end) const
 	{
-		printf("[+] scanning from begin: 0x%p to: 0x%p\n", begin, begin + end);
-
 		//if the physical memory range is less then or equal to 2mb
 		if (begin + end <= 0x1000 * 512)
 		{

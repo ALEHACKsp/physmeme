@@ -124,19 +124,9 @@ namespace hook
 		std::uint8_t org_bytes[sizeof(jmp_code)];
 	};
 
-	static std::map<void*, std::unique_ptr<detour>> hooks{};
-
-	/*
-	Author: xerox
-	Date: 12/19/2019
-
-	Create Hook without needing to deal with objects
-	*/
-	static void make_hook(void* addr_to_hook, void* jmp_to_addr, bool enable = true)
+	inline std::map<void*, std::unique_ptr<detour>> hooks{};
+	inline void make_hook(void* addr_to_hook, void* jmp_to_addr, bool enable = true)
 	{	
-		if (!addr_to_hook)
-			return;
-
 		hooks.insert({
 			addr_to_hook,
 			std::make_unique<detour>(
@@ -147,43 +137,18 @@ namespace hook
 		);
 	}
 
-	/*
-	Author: xerox
-	Date: 12/19/2019
-
-	Enable hook given the address to hook
-	*/
-	static void enable(void* addr)
+	inline void enable(void* addr)
 	{
-		if (!addr)
-			return;
 		hooks.at(addr)->install();
 	}
 
-	/*
-	Author: xerox
-	Date: 12/19/2019
-
-	Disable hook givent the address of the hook
-	*/
-	static void disable(void* addr)
+	inline void disable(void* addr)
 	{
-		if (!addr)
-			return;
 		hooks.at(addr)->uninstall();
 	}
 
-
-	/*
-	Author: xerox
-	Date: 12/19/2019
-
-	Remove hook completely from vector
-	*/
-	static void remove(void* addr)
+	inline void remove(void* addr)
 	{
-		if (!addr)
-			return;
 		hooks.at(addr)->~detour();
 		hooks.erase(addr);
 	}

