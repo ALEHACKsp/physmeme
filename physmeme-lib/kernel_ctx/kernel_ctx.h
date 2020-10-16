@@ -13,19 +13,35 @@
 namespace physmeme
 {
 	//
-	// you can edit this how you choose, im hooking NtShutdownSystem.
+	// offset of function into a physical page
+	// used for comparing bytes when searching
 	//
-	constexpr std::pair<const char*, const char*> syscall_hook = { "NtShutdownSystem", "ntdll.dll" };
+	inline std::uint16_t nt_page_offset{};
 
 	//
-	// has the page (containing the syscall) been found yet?
+	// rva of nt function we are going to hook
+	//
+	inline std::uint32_t nt_rva{};
+
+	//
+	// base address of ntoskrnl (inside of this process)
+	//
+	inline const std::uint8_t* ntoskrnl_buffer{};
+
+	//
+	// has the page been found yet?
 	//
 	inline std::atomic<bool> is_page_found = false;
 
 	//
 	// mapping of a syscalls physical memory (for installing hooks)
 	//
-	inline std::atomic<void*> psyscall_func;
+	inline std::atomic<void*> psyscall_func{};
+
+	//
+	// you can edit this how you choose, im hooking NtShutdownSystem.
+	//
+	inline const std::pair<std::string_view, std::string_view> syscall_hook = { "NtShutdownSystem", "ntdll.dll" };
 
 	class kernel_ctx
 	{
@@ -89,7 +105,7 @@ namespace physmeme
 			static const auto proc = 
 				GetProcAddress(
 					GetModuleHandleA("ntdll.dll"),
-					syscall_hook.first
+					syscall_hook.first.data()
 				);
 
 			hook::make_hook(psyscall_func, addr);
@@ -98,21 +114,6 @@ namespace physmeme
 			return result;
 		}
 	private:
-		//
-		// offset of function into a physical page
-		// used for comparing bytes when searching
-		//
-		std::uint16_t nt_page_offset;
-
-		//
-		// rva of nt function we are going to hook
-		//
-		std::uint32_t nt_rva;
-
-		//
-		// base address of ntoskrnl (inside of this process)
-		//
-		std::uint8_t* ntoskrnl_buffer;
 
 		//
 		// find and map the physical page of a syscall into this process
