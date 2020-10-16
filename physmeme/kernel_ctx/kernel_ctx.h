@@ -30,9 +30,6 @@ namespace physmeme
 	class kernel_ctx
 	{
 	public:
-		//
-		// default constructor
-		//
 		kernel_ctx();
 
 		//

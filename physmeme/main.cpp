@@ -20,7 +20,6 @@ int __cdecl main(int argc, char** argv)
 	}
 
 	physmeme::drv_image image(drv_buffer);
-
 	if (!physmeme::load_drv())
 	{
 		perror("[!] unable to load driver....\n");
@@ -30,18 +29,13 @@ int __cdecl main(int argc, char** argv)
 	physmeme::kernel_ctx ctx;
 
 	//
-	// shoot the tires off piddb cache entry.
+	// unload exploitable driver, we dont need it loaded after we create kernel_ctx...
 	//
-	const auto drv_timestamp = util::get_file_header((void*)raw_driver)->TimeDateStamp;
-	printf("[+] clearing piddb cache for driver: %s, with timestamp 0x%x\n", physmeme::drv_key.c_str(), drv_timestamp);
-
-	if (!ctx.clear_piddb_cache(physmeme::drv_key, drv_timestamp))
+	if (!physmeme::unload_drv())
 	{
-		// this is because the signature might be broken on these versions of windows.
-		perror("[-] failed to clear PiDDBCacheTable.\n");
+		perror("[!] unable to unload driver... all handles closed?\n");
 		return -1;
 	}
-	printf("[+] cleared piddb cache...\n");
 
 	//
 	// lambdas used for fixing driver image
@@ -104,16 +98,6 @@ int __cdecl main(int argc, char** argv)
 	// zero driver headers
 	//
 	ctx.zero_kernel_memory(pool_base, image.header_size());
-
-	//
-	// unload exploitable driver
-	//
-	physmeme::unmap_all(); // just in case there are any left over physical pages mapped...
-	if (!physmeme::unload_drv())
-	{
-		perror("[!] unable to unload driver... all handles closed?\n");
-		return -1;
-	}
 
 	printf("[+] unloaded exploitable driver....\n");
 	printf("[=] press enter to close\n");

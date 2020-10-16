@@ -51,20 +51,11 @@ namespace hook
 			: hook_addr(addr_to_hook), detour_addr(jmp_to), hook_installed(false)
 		{
 			//setup hook
-			memcpy(
-				jmp_code + OFFSET_TO_ADDRESS,
-				&jmp_to,
-				sizeof(jmp_to)
-			);
+			memcpy(jmp_code + OFFSET_TO_ADDRESS, &jmp_to, sizeof(jmp_to));
 
 			//save bytes
-			memcpy(
-				org_bytes,
-				hook_addr,
-				sizeof(org_bytes)
-			);
-			if(enable)
-				install();
+			memcpy(org_bytes, hook_addr, sizeof(org_bytes));
+			if(enable) install();
 		}
 
 		void install()

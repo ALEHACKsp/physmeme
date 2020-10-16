@@ -27,13 +27,10 @@ namespace physmeme
 	inline std::string drv_key;
 	inline HANDLE drv_handle = NULL;
 
-	// keep track of mappings.
-	inline std::vector<std::pair<std::uintptr_t, std::uint32_t >> virtual_mappings;
-
 	//
 	// please code this function depending on your method of physical read/write.
 	//
-	inline bool load_drv()
+	__forceinline bool load_drv()
 	{
 		const auto [result, key] =
 			driver::load(
@@ -57,7 +54,7 @@ namespace physmeme
 	//
 	// please code this function depending on your method of physical read/write.
 	//
-	inline bool unload_drv()
+	__forceinline bool unload_drv()
 	{
 		return CloseHandle(drv_handle) && driver::unload(drv_key);
 	}
@@ -65,7 +62,7 @@ namespace physmeme
 	//
 	// please code this function depending on your method of physical read/write.
 	//
-	inline std::uintptr_t map_phys(
+	__forceinline std::uintptr_t map_phys(
 		std::uintptr_t addr,
 		std::size_t size
 	)
@@ -80,14 +77,13 @@ namespace physmeme
 		DeviceIoControl(drv_handle, MAP_PHYS, reinterpret_cast<LPVOID>(&in_buffer), sizeof(in_buffer),
 			reinterpret_cast<LPVOID>(out_buffer), sizeof(out_buffer), &returned, NULL);
 
-		virtual_mappings.emplace_back(std::pair<std::uintptr_t, std::size_t>(out_buffer[0], size));
 		return out_buffer[0];
 	}
 
 	//
 	// please code this function depending on your method of physical read/write.
 	//
-	inline bool unmap_phys(
+	__forceinline bool unmap_phys(
 		std::uintptr_t addr,
 		std::size_t size
 	)
@@ -99,14 +95,5 @@ namespace physmeme
 		DeviceIoControl(drv_handle, UNMAP_PHYS, reinterpret_cast<LPVOID>(&in_buffer), sizeof(in_buffer),
 			reinterpret_cast<LPVOID>(out_buffer), sizeof(out_buffer), &returned, NULL);
 		return out_buffer[0];
-	}
-
-	//
-	// unmap all physical memory that was mapped.
-	//
-	inline void unmap_all()
-	{
-		for (auto idx = 0u; idx < virtual_mappings.size(); ++idx)
-			unmap_phys(virtual_mappings[idx].first, virtual_mappings[idx].second);
 	}
 }
