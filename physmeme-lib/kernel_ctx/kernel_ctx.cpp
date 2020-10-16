@@ -10,17 +10,17 @@ namespace physmeme
 		nt_rva = reinterpret_cast<std::uint32_t>(
 			util::get_kernel_export(
 				"ntoskrnl.exe",
-				syscall_hook.first,
+				syscall_hook.first.data(),
 				true
 			));
 
 		nt_page_offset = nt_rva % page_size;
 		ntoskrnl_buffer = reinterpret_cast<std::uint8_t*>(
-			LoadLibraryEx("ntoskrnl.exe", NULL, 
-				DONT_RESOLVE_DLL_REFERENCES));
+			LoadLibraryEx("ntoskrnl.exe", NULL, DONT_RESOLVE_DLL_REFERENCES)
+		);
 
-		//--- for each physical memory range, make a thread to search it
 		std::vector<std::thread> search_threads;
+		//--- for each physical memory range, make a thread to search it
 		for (auto ranges : util::pmem_ranges)
 			search_threads.emplace_back(std::thread(
 				&kernel_ctx::map_syscall,
