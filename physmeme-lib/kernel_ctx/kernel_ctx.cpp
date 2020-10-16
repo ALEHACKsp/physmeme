@@ -43,22 +43,30 @@ namespace physmeme
 			{
 				// scan every page of the physical memory range
 				for (auto page = page_va; page < page_va + end; page += 0x1000)
+				{
 					if (!is_page_found.load()) // keep scanning until its found
-						if (!memcmp(reinterpret_cast<void*>(page), ntoskrnl_buffer + nt_rva, 32))
+					{
+						__try
 						{
-							//
-							// this checks to ensure that the syscall does indeed work. if it doesnt, we keep looking!
-							//
-							psyscall_func.store((void*)page);
-							auto my_proc_base = reinterpret_cast<std::uintptr_t>(GetModuleHandleA(NULL));
-							auto my_proc_base_from_syscall = reinterpret_cast<std::uintptr_t>(get_proc_base(GetCurrentProcessId()));
+							if (!memcmp(reinterpret_cast<void*>(page), ntoskrnl_buffer + nt_rva, 32))
+							{
+								//
+								// this checks to ensure that the syscall does indeed work. if it doesnt, we keep looking!
+								//
+								psyscall_func.store((void*)page);
+								auto my_proc_base = reinterpret_cast<std::uintptr_t>(GetModuleHandleA(NULL));
+								auto my_proc_base_from_syscall = reinterpret_cast<std::uintptr_t>(get_proc_base(GetCurrentProcessId()));
 
-							if (my_proc_base != my_proc_base_from_syscall)
-								continue;
+								if (my_proc_base != my_proc_base_from_syscall)
+									continue;
 
-							is_page_found.store(true);
-							return;
+								is_page_found.store(true);
+								return;
+							}
 						}
+						__except (EXCEPTION_EXECUTE_HANDLER) {}
+					}
+				}
 				physmeme::unmap_phys(page_va, end);
 			}
 		}
@@ -77,6 +85,41 @@ namespace physmeme
 					{
 						if (!is_page_found.load())
 						{
+							__try
+							{
+								if (!memcmp(reinterpret_cast<void*>(page), ntoskrnl_buffer + nt_rva, 32))
+								{
+									//
+									// this checks to ensure that the syscall does indeed work. if it doesnt, we keep looking!
+									//
+									psyscall_func.store((void*)page);
+									auto my_proc_base = reinterpret_cast<std::uintptr_t>(GetModuleHandle(NULL));
+									auto my_proc_base_from_syscall = reinterpret_cast<std::uintptr_t>(get_proc_base(GetCurrentProcessId()));
+
+									if (my_proc_base != my_proc_base_from_syscall)
+										continue;
+
+									is_page_found.store(true);
+									return;
+								}
+							}
+							__except (EXCEPTION_EXECUTE_HANDLER) {}
+						}
+					}
+					physmeme::unmap_phys(page_va, 0x1000 * 512);
+				}
+			}
+
+			// map the remainder and check each page of it
+			auto page_va = physmeme::map_phys(begin + end - remainder + nt_page_offset, remainder);
+			if (page_va)
+			{
+				for (auto page = page_va; page < page_va + remainder; page += 0x1000)
+				{
+					if (!is_page_found.load())
+					{
+						__try
+						{
 							if (!memcmp(reinterpret_cast<void*>(page), ntoskrnl_buffer + nt_rva, 32))
 							{
 								//
@@ -93,34 +136,7 @@ namespace physmeme
 								return;
 							}
 						}
-					}
-					physmeme::unmap_phys(page_va, 0x1000 * 512);
-				}
-			}
-
-			// map the remainder and check each page of it
-			auto page_va = physmeme::map_phys(begin + end - remainder + nt_page_offset, remainder);
-			if (page_va)
-			{
-				for (auto page = page_va; page < page_va + remainder; page += 0x1000)
-				{
-					if (!is_page_found.load())
-					{
-						if (!memcmp(reinterpret_cast<void*>(page), ntoskrnl_buffer + nt_rva, 32))
-						{
-							//
-							// this checks to ensure that the syscall does indeed work. if it doesnt, we keep looking!
-							//
-							psyscall_func.store((void*)page);
-							auto my_proc_base = reinterpret_cast<std::uintptr_t>(GetModuleHandle(NULL));
-							auto my_proc_base_from_syscall = reinterpret_cast<std::uintptr_t>(get_proc_base(GetCurrentProcessId()));
-
-							if (my_proc_base != my_proc_base_from_syscall)
-								continue;
-
-							is_page_found.store(true);
-							return;
-						}
+						__except (EXCEPTION_EXECUTE_HANDLER) {}
 					}
 				}
 				physmeme::unmap_phys(page_va, remainder);
