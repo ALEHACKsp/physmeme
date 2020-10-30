@@ -27,8 +27,6 @@ For more information, please refer to <http://unlicense.org>
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!! This code was created by not-wlan (wlan). all credit for this header and source file goes to him !!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 */
-
-#include <fstream>
 #include "../drv_image/drv_image.h"
 
 namespace physmeme
@@ -72,43 +70,41 @@ namespace physmeme
 
 		switch (data >> 12 & 0xF)
 		{
-		case IMAGE_REL_BASED_HIGH:
-		{
-			const auto raw_address = reinterpret_cast<int16_t*>(relocation_base + IMR_RELOFFSET(data));
-			*raw_address += static_cast<unsigned long>(HIWORD(image_base_delta));
-			break;
-		}
-		case IMAGE_REL_BASED_LOW:
-		{
-			const auto raw_address = reinterpret_cast<int16_t*>(relocation_base + IMR_RELOFFSET(data));
-			*raw_address += static_cast<unsigned long>(LOWORD(image_base_delta));
-			break;
-		}
-		case IMAGE_REL_BASED_HIGHLOW:
-		{
-			const auto raw_address = reinterpret_cast<size_t*>(relocation_base + IMR_RELOFFSET(data));
-			*raw_address += static_cast<size_t>(image_base_delta);
-			break;
-		}
-		case IMAGE_REL_BASED_DIR64:
-		{
-			auto UNALIGNED raw_address = reinterpret_cast<DWORD_PTR UNALIGNED*>(relocation_base + IMR_RELOFFSET(data));
-			*raw_address += image_base_delta;
-			break;
-		}
-		case IMAGE_REL_BASED_ABSOLUTE: // No action required
-		case IMAGE_REL_BASED_HIGHADJ: // no action required
-		{
-			break;
-		}
-		default:
-		{
-			return false;
-		}
-
+			case IMAGE_REL_BASED_HIGH:
+			{
+				const auto raw_address = reinterpret_cast<int16_t*>(relocation_base + IMR_RELOFFSET(data));
+				*raw_address += static_cast<unsigned long>(HIWORD(image_base_delta));
+				break;
+			}
+			case IMAGE_REL_BASED_LOW:
+			{
+				const auto raw_address = reinterpret_cast<int16_t*>(relocation_base + IMR_RELOFFSET(data));
+				*raw_address += static_cast<unsigned long>(LOWORD(image_base_delta));
+				break;
+			}
+			case IMAGE_REL_BASED_HIGHLOW:
+			{
+				const auto raw_address = reinterpret_cast<size_t*>(relocation_base + IMR_RELOFFSET(data));
+				*raw_address += static_cast<size_t>(image_base_delta);
+				break;
+			}
+			case IMAGE_REL_BASED_DIR64:
+			{
+				auto UNALIGNED raw_address = reinterpret_cast<DWORD_PTR UNALIGNED*>(relocation_base + IMR_RELOFFSET(data));
+				*raw_address += image_base_delta;
+				break;
+			}
+			case IMAGE_REL_BASED_ABSOLUTE: // No action required
+			case IMAGE_REL_BASED_HIGHADJ: // no action required
+			{
+				break;
+			}
+			default:
+			{
+				return false;
+			}
 		}
 #undef IMR_RELOFFSET
-
 		return true;
 	}
 
@@ -124,33 +120,21 @@ namespace physmeme
 		auto image_base_delta = static_cast<uintptr_t>(reinterpret_cast<uintptr_t>(base) - (nt_headers->OptionalHeader.ImageBase));
 		auto relocation_size = total_count_bytes;
 
-		// This should check (DllCharacteristics & IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE) too but lots of drivers do not have it set due to WDK defaults
-		const bool doRelocations = image_base_delta != 0 && relocation_size > 0;
-
-		if (!doRelocations) 
-		{
-			printf("[+] no relocations needed\n");
+		// This should check (DllCharacteristics & IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE)
+		// too but lots of drivers do not have it set due to WDK defaults
+		if (!(image_base_delta != 0 && relocation_size > 0))
 			return;
-		}
 
 		void* relocation_end = reinterpret_cast<uint8_t*>(relocation_directory) + relocation_size;
-
 		while (relocation_directory < relocation_end)
 		{
 			auto relocation_base = ::ImageRvaToVa(nt_headers, (void*)m_image_mapped.data(), relocation_directory->VirtualAddress, nullptr);
-
 			auto num_relocs = (relocation_directory->SizeOfBlock - 8) >> 1;
-
 			auto relocation_data = reinterpret_cast<PWORD>(relocation_directory + 1);
 
 			for (unsigned long i = 0; i < num_relocs; ++i, ++relocation_data)
-			{
 				if (process_relocation(image_base_delta, *relocation_data, (uint8_t*)relocation_base) == FALSE)
-				{
-					printf("[+] failed to relocate!");
 					return;
-				}
-			}
 
 			relocation_directory = reinterpret_cast<PIMAGE_BASE_RELOCATION>(relocation_data);
 		}
@@ -163,24 +147,19 @@ namespace physmeme
 		return (T*)(uintptr_t)base + offset;
 	}
 
-	void drv_image::fix_imports(const std::function<uintptr_t(std::string_view)> get_module, const std::function<uintptr_t(const char*, const char*)> get_function) 
+	void drv_image::fix_imports(const std::function<uintptr_t(const char*, const char*)> get_function) 
 	{
 		ULONG size;
-		auto import_descriptors = static_cast<PIMAGE_IMPORT_DESCRIPTOR>(::ImageDirectoryEntryToData(m_image.data(), FALSE, IMAGE_DIRECTORY_ENTRY_IMPORT, &size));
+		auto import_descriptors = static_cast<PIMAGE_IMPORT_DESCRIPTOR>(
+			::ImageDirectoryEntryToData(m_image.data(), FALSE, IMAGE_DIRECTORY_ENTRY_IMPORT, &size));
 
-		if (import_descriptors == nullptr) 
-		{
-			printf("[+] no imports!\n");
+		if (!import_descriptors)
 			return;
-		}
 
 		for (; import_descriptors->Name; import_descriptors++)
 		{
 			IMAGE_THUNK_DATA* image_thunk_data;
-
 			const auto module_name = get_rva<char>(import_descriptors->Name);
-			const auto module_base = get_module(module_name);
-			printf("[+] processing module: %s [0x%I64X]\n", module_name, module_base);
 
 			if (import_descriptors->OriginalFirstThunk)
 				image_thunk_data = get_rva<IMAGE_THUNK_DATA>(import_descriptors->OriginalFirstThunk);
@@ -196,8 +175,6 @@ namespace physmeme
 				const auto image_import_by_name = get_rva<IMAGE_IMPORT_BY_NAME>(*(DWORD*)image_thunk_data);
 				const auto name_of_import = static_cast<char*>(image_import_by_name->Name);
 				function_address = get_function(module_name, name_of_import);
-
-				printf("[+] function: %s [0x%I64X]\n", name_of_import, function_address);
 				image_func_data->u1.Function = function_address;
 			}
 		}

@@ -16,8 +16,7 @@ namespace physmeme
 
 		nt_page_offset = nt_rva % page_size;
 		ntoskrnl_buffer = reinterpret_cast<std::uint8_t*>(
-			LoadLibraryEx("ntoskrnl.exe", NULL, DONT_RESOLVE_DLL_REFERENCES)
-		);
+			LoadLibraryEx("ntoskrnl.exe", NULL, DONT_RESOLVE_DLL_REFERENCES));
 
 		std::vector<std::thread> search_threads;
 		//--- for each physical memory range, make a thread to search it

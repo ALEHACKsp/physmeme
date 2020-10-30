@@ -21,7 +21,7 @@ namespace util
 	static std::map<std::uintptr_t, std::size_t> pmem_ranges{};
 
 	//--- validates the address
-	inline bool is_phys_addr_valid(std::uintptr_t addr)
+	inline bool is_valid(std::uintptr_t addr)
 	{
 		for (auto range : pmem_ranges)
 			if (addr >= range.first && addr <= range.first + range.second)

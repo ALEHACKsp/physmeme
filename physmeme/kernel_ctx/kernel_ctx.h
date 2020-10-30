@@ -27,6 +27,22 @@ namespace physmeme
 	//
 	inline std::atomic<void*> psyscall_func;
 
+	//
+	// offset of function into a physical page
+	// used for comparing bytes when searching
+	//
+	inline std::uint16_t nt_page_offset;
+
+	//
+	// rva of nt function we are going to hook
+	//
+	inline std::uint32_t nt_rva;
+
+	//
+	// base address of ntoskrnl (inside of this process)
+	//
+	inline std::uint8_t* ntoskrnl_buffer;
+
 	class kernel_ctx
 	{
 	public:
@@ -98,22 +114,6 @@ namespace physmeme
 			return result;
 		}
 	private:
-		//
-		// offset of function into a physical page
-		// used for comparing bytes when searching
-		//
-		std::uint16_t nt_page_offset;
-
-		//
-		// rva of nt function we are going to hook
-		//
-		std::uint32_t nt_rva;
-
-		//
-		// base address of ntoskrnl (inside of this process)
-		//
-		std::uint8_t* ntoskrnl_buffer;
-
 		//
 		// find and map the physical page of a syscall into this process
 		//
